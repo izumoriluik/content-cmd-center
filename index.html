@@ -1409,21 +1409,47 @@ function saveSchedFromModal() {
   const sub = document.getElementById('sched-edit-sub').value.trim();
   if (!title || !date) return;
 
+  const subVal = sub || (recur ? recurLabel(recur) : '');
   if (editingSchedId !== null) {
     const s = data.schedules.find(x => x.id === editingSchedId);
     if (s) {
+      const oldRecur = s.recur;
       s.title = title;
       s.date = date;
       s.tag = tag;
       s.urgency = urgency;
       s.recur = recur;
-      s.sub = sub || (recur ? recurLabel(recur) : '');
+      s.sub = subVal;
+      if (recur && recur !== oldRecur) {
+        const base = new Date(date);
+        for (let i = 1; i <= 8; i++) {
+          const nd = new Date(base);
+          if (recur === 'weekly') nd.setDate(nd.getDate() + 7 * i);
+          else if (recur === 'biweekly') nd.setDate(nd.getDate() + 14 * i);
+          else if (recur === 'monthly') nd.setMonth(nd.getMonth() + i);
+          const dt = nd.toISOString().slice(0, 10);
+          const ex = data.schedules.find(x => x.date === dt);
+          if (ex) { ex.title = title; ex.tag = tag; ex.urgency = urgency; ex.recur = recur; ex.sub = subVal; }
+          else { data.schedules.push({ id: data.nextId++, title, date: dt, tag, urgency, sub: subVal, recur }); }
+        }
+      }
     }
   } else {
-    data.schedules.push({
-      id: data.nextId++,
-      title, date, tag, urgency, recur,
-      sub: sub || (recur ? recurLabel(recur) : '')
+    const dates = [date];
+    if (recur) {
+      const base = new Date(date);
+      for (let i = 1; i <= 8; i++) {
+        const nd = new Date(base);
+        if (recur === 'weekly') nd.setDate(nd.getDate() + 7 * i);
+        else if (recur === 'biweekly') nd.setDate(nd.getDate() + 14 * i);
+        else if (recur === 'monthly') nd.setMonth(nd.getMonth() + i);
+        dates.push(nd.toISOString().slice(0, 10));
+      }
+    }
+    dates.forEach(dt => {
+      const ex = data.schedules.find(x => x.date === dt);
+      if (ex) { ex.title = title; ex.tag = tag; ex.urgency = urgency; ex.recur = recur; ex.sub = subVal; }
+      else { data.schedules.push({ id: data.nextId++, title, date: dt, tag, urgency, sub: subVal, recur }); }
     });
   }
   saveAndSync(); renderAll(); closeSchedModal();
@@ -1598,16 +1624,29 @@ function addSchedule() {
   const recur = document.getElementById('new-sched-recur').value;
   if (!title || !date) return;
   const sub = recur ? recurLabel(recur) : '';
-  const existing = data.schedules.find(s => s.date === date);
-  if (existing) {
-    existing.title = title;
-    existing.tag = tag;
-    existing.urgency = urgency;
-    existing.recur = recur;
-    existing.sub = sub || existing.sub;
-  } else {
-    data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub, recur });
+  const dates = [date];
+  if (recur) {
+    const base = new Date(date);
+    for (let i = 1; i <= 8; i++) {
+      const nd = new Date(base);
+      if (recur === 'weekly') nd.setDate(nd.getDate() + 7 * i);
+      else if (recur === 'biweekly') nd.setDate(nd.getDate() + 14 * i);
+      else if (recur === 'monthly') nd.setMonth(nd.getMonth() + i);
+      dates.push(nd.toISOString().slice(0, 10));
+    }
   }
+  dates.forEach(dt => {
+    const existing = data.schedules.find(s => s.date === dt);
+    if (existing) {
+      existing.title = title;
+      existing.tag = tag;
+      existing.urgency = urgency;
+      existing.recur = recur;
+      existing.sub = sub || existing.sub;
+    } else {
+      data.schedules.push({ id: data.nextId++, title, date: dt, tag, urgency, sub, recur });
+    }
+  });
   document.getElementById('new-sched-title').value = '';
   document.getElementById('new-sched-recur').value = '';
   saveAndSync(); renderAll();
