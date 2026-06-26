@@ -1350,8 +1350,20 @@ function stExportImage() {
   w.document.close();
 }
 
+function upsertSchedule(dateStr, title) {
+  const existing = data.schedules.find(s => s.date === dateStr);
+  if (existing) {
+    existing.title = title;
+  } else {
+    data.schedules.push({ id: data.nextId++, title, date: dateStr, tag: 'other', urgency: 'mid', sub: '', recur: '' });
+  }
+  saveAndSync(); renderAll();
+}
+
 function calCellClick(dateStr, cell) {
   if (cell.querySelector('.cal-inline-input')) return;
+  const existing = data.schedules.find(s => s.date === dateStr);
+  if (existing) { openSchedModal(existing.id); return; }
   const hint = cell.querySelector('.cal-cell-add-hint');
   if (hint) hint.style.display = 'none';
   const input = document.createElement('input');
@@ -1361,25 +1373,15 @@ function calCellClick(dateStr, cell) {
   input.onkeydown = (e) => {
     if (e.key === 'Enter') {
       const title = input.value.trim();
-      if (title) {
-        data.schedules.push({ id: data.nextId++, title, date: dateStr, urgency: 'mid', sub: '', recur: '' });
-        saveAndSync(); renderAll();
-      } else {
-        input.remove();
-        if (hint) hint.style.display = '';
-      }
+      if (title) { upsertSchedule(dateStr, title); }
+      else { input.remove(); if (hint) hint.style.display = ''; }
     }
     if (e.key === 'Escape') { input.remove(); if (hint) hint.style.display = ''; }
   };
   input.onblur = () => {
     const title = input.value.trim();
-    if (title) {
-      data.schedules.push({ id: data.nextId++, title, date: dateStr, urgency: 'mid', sub: '', recur: '' });
-      saveAndSync(); renderAll();
-    } else {
-      input.remove();
-      if (hint) hint.style.display = '';
-    }
+    if (title) { upsertSchedule(dateStr, title); }
+    else { input.remove(); if (hint) hint.style.display = ''; }
   };
   cell.appendChild(input);
   input.focus();
