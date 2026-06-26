@@ -349,6 +349,47 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
   </div>
 </div>
 
+<!-- Task Edit Modal -->
+<div class="sched-modal-overlay" id="task-edit-modal" style="display:none;" onclick="if(event.target===this)closeTaskModal()">
+  <div class="sched-modal">
+    <h3><i class="ti ti-checklist" style="font-size:16px;"></i> タスクを編集</h3>
+    <div class="sched-form-row">
+      <label>タイトル</label>
+      <input type="text" id="task-edit-title" />
+    </div>
+    <div style="display:flex;gap:12px;">
+      <div class="sched-form-row" style="flex:1;">
+        <label>カテゴリ</label>
+        <select id="task-edit-tag">
+          <option value="stream">配信</option>
+          <option value="short">ショート</option>
+          <option value="edit">編集</option>
+          <option value="other">その他</option>
+        </select>
+      </div>
+      <div class="sched-form-row" style="flex:1;">
+        <label>ステータス</label>
+        <select id="task-edit-status">
+          <option value="todo">未着手</option>
+          <option value="wip">進行中</option>
+          <option value="done">完了</option>
+        </select>
+      </div>
+    </div>
+    <div class="sched-form-row">
+      <label>期限日</label>
+      <input type="date" id="task-edit-due" />
+    </div>
+    <div class="sched-modal-actions">
+      <button onclick="deleteTaskFromModal()" style="color:var(--red-dark);border-color:var(--red-light);"><i class="ti ti-trash"></i> 削除</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="closeTaskModal()">キャンセル</button>
+        <button class="btn-primary" onclick="saveTaskFromModal()"><i class="ti ti-check"></i> 保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Schedule Edit Modal -->
 <div class="sched-modal-overlay" id="sched-edit-modal" style="display:none;" onclick="if(event.target===this)closeSchedModal()">
   <div class="sched-modal">
@@ -1537,7 +1578,7 @@ function taskHTML(t, compact) {
         <span class="task-date">${t.due?'〆 '+t.due:t.created||''}</span>
       </div>
     </div>
-    ${!compact?`<button class="icon-btn" onclick="deleteTask(${t.id})" title="削除"><i class="ti ti-trash"></i></button>`:''}
+    ${!compact?`<button class="icon-btn" onclick="openTaskModal(${t.id})" title="編集"><i class="ti ti-edit"></i></button><button class="icon-btn" onclick="deleteTask(${t.id})" title="削除"><i class="ti ti-trash"></i></button>`:''}
   </div>`;
 }
 
@@ -1657,6 +1698,41 @@ function cycleStatus(id) {
 }
 
 function deleteTask(id) { data.tasks = data.tasks.filter(t=>t.id!==id); saveAndSync(); renderAll(); }
+
+let editingTaskId = null;
+
+function openTaskModal(id) {
+  editingTaskId = id;
+  const t = data.tasks.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('task-edit-title').value = t.title;
+  document.getElementById('task-edit-tag').value = t.tag;
+  document.getElementById('task-edit-status').value = t.status;
+  document.getElementById('task-edit-due').value = t.due || '';
+  document.getElementById('task-edit-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('task-edit-title').focus(), 50);
+}
+
+function closeTaskModal() {
+  document.getElementById('task-edit-modal').style.display = 'none';
+  editingTaskId = null;
+}
+
+function saveTaskFromModal() {
+  const t = data.tasks.find(x => x.id === editingTaskId);
+  if (!t) return;
+  t.title = document.getElementById('task-edit-title').value.trim() || t.title;
+  t.tag = document.getElementById('task-edit-tag').value;
+  t.status = document.getElementById('task-edit-status').value;
+  t.due = document.getElementById('task-edit-due').value || '';
+  saveAndSync(); renderAll(); closeTaskModal();
+}
+
+function deleteTaskFromModal() {
+  if (editingTaskId === null) return;
+  data.tasks = data.tasks.filter(t => t.id !== editingTaskId);
+  saveAndSync(); renderAll(); closeTaskModal();
+}
 
 function addSchedule() {
   const title = document.getElementById('new-sched-title').value.trim();
