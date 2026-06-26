@@ -775,6 +775,32 @@ function urgencyClass(u) { return u==='high'?'urgency-high':u==='mid'?'urgency-m
 function urgencyLabel(u) { return u==='high'?'重要':u==='mid'?'普通':'余裕あり'; }
 function recurLabel(r) { return r==='weekly'?'毎週':r==='biweekly'?'隔週':r==='monthly'?'毎月':''; }
 
+function expandSchedules(startStr, endStr) {
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+  const byDate = {};
+  data.schedules.forEach(s => {
+    if (!byDate[s.date]) byDate[s.date] = [];
+    byDate[s.date].push(s);
+    if (s.recur) {
+      const base = new Date(s.date);
+      let d = new Date(base);
+      for (let i = 0; i < 200; i++) {
+        if (s.recur === 'weekly') d = new Date(base.getTime() + (i + 1) * 7 * 86400000);
+        else if (s.recur === 'biweekly') d = new Date(base.getTime() + (i + 1) * 14 * 86400000);
+        else if (s.recur === 'monthly') { d = new Date(base); d.setMonth(d.getMonth() + i + 1); }
+        if (d > end) break;
+        if (d < start) continue;
+        const ds = d.toISOString().slice(0, 10);
+        if (data.schedules.some(x => x.date === ds)) continue;
+        if (!byDate[ds]) byDate[ds] = [];
+        byDate[ds].push({ ...s, date: ds, _virtual: true, _parentId: s.id });
+      }
+    }
+  });
+  return byDate;
+}
+
 const TAGS = ['stream','short','edit','other'];
 const URGENCIES = ['high','mid','low'];
 
@@ -1079,11 +1105,10 @@ function renderCalendar() {
   const prevDays = new Date(calYear, calMonth, 0).getDate();
   const todayStr = today();
 
-  const schedByDate = {};
-  data.schedules.forEach(s => {
-    if (!schedByDate[s.date]) schedByDate[s.date] = [];
-    schedByDate[s.date].push(s);
-  });
+  const totalCellsEst = Math.ceil((startDow + daysInMonth) / 7) * 7;
+  const calStart = new Date(calYear, calMonth, 1 - startDow);
+  const calEnd = new Date(calYear, calMonth, 1 - startDow + totalCellsEst);
+  const schedByDate = expandSchedules(calStart.toISOString().slice(0,10), calEnd.toISOString().slice(0,10));
 
   let html = `<div class="cal-header">
     <button class="cal-today-btn" onclick="calToday()">今日</button>
@@ -1201,11 +1226,9 @@ function stThisWeek() {
 
 function stLoadFromSchedules() {
   const days = stGetDays();
-  const schedByDate = {};
-  data.schedules.forEach(s => {
-    if (!schedByDate[s.date]) schedByDate[s.date] = [];
-    schedByDate[s.date].push(s);
-  });
+  const startStr = days[0].str;
+  const endStr = days[6].str;
+  const schedByDate = expandSchedules(startStr, endStr);
   days.forEach(d => {
     if (stInputs[d.str] !== undefined) return;
     const events = schedByDate[d.str] || [];
@@ -1413,44 +1436,24 @@ function saveSchedFromModal() {
   if (editingSchedId !== null) {
     const s = data.schedules.find(x => x.id === editingSchedId);
     if (s) {
-      const oldRecur = s.recur;
       s.title = title;
       s.date = date;
       s.tag = tag;
       s.urgency = urgency;
       s.recur = recur;
       s.sub = subVal;
-      if (recur && recur !== oldRecur) {
-        const base = new Date(date);
-        for (let i = 1; i <= 8; i++) {
-          const nd = new Date(base);
-          if (recur === 'weekly') nd.setDate(nd.getDate() + 7 * i);
-          else if (recur === 'biweekly') nd.setDate(nd.getDate() + 14 * i);
-          else if (recur === 'monthly') nd.setMonth(nd.getMonth() + i);
-          const dt = nd.toISOString().slice(0, 10);
-          const ex = data.schedules.find(x => x.date === dt);
-          if (ex) { ex.title = title; ex.tag = tag; ex.urgency = urgency; ex.recur = recur; ex.sub = subVal; }
-          else { data.schedules.push({ id: data.nextId++, title, date: dt, tag, urgency, sub: subVal, recur }); }
-        }
-      }
     }
   } else {
-    const dates = [date];
-    if (recur) {
-      const base = new Date(date);
-      for (let i = 1; i <= 8; i++) {
-        const nd = new Date(base);
-        if (recur === 'weekly') nd.setDate(nd.getDate() + 7 * i);
-        else if (recur === 'biweekly') nd.setDate(nd.getDate() + 14 * i);
-        else if (recur === 'monthly') nd.setMonth(nd.getMonth() + i);
-        dates.push(nd.toISOString().slice(0, 10));
-      }
+    const existing = data.schedules.find(x => x.date === date);
+    if (existing) {
+      existing.title = title;
+      existing.tag = tag;
+      existing.urgency = urgency;
+      existing.recur = recur;
+      existing.sub = subVal;
+    } else {
+      data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub: subVal, recur });
     }
-    dates.forEach(dt => {
-      const ex = data.schedules.find(x => x.date === dt);
-      if (ex) { ex.title = title; ex.tag = tag; ex.urgency = urgency; ex.recur = recur; ex.sub = subVal; }
-      else { data.schedules.push({ id: data.nextId++, title, date: dt, tag, urgency, sub: subVal, recur }); }
-    });
   }
   saveAndSync(); renderAll(); closeSchedModal();
 }
@@ -1556,7 +1559,13 @@ function renderTasks() {
 }
 
 function renderSchedule() {
-  const sorted = [...data.schedules].sort((a,b)=>a.date.localeCompare(b.date));
+  const todayS = today();
+  const endS = new Date(new Date().getTime() + 90 * 86400000).toISOString().slice(0,10);
+  const expanded = expandSchedules(todayS, endS);
+  const all = [];
+  Object.values(expanded).forEach(arr => arr.forEach(s => all.push(s)));
+  data.schedules.filter(s => s.date < todayS).forEach(s => all.push(s));
+  const sorted = all.sort((a,b) => a.date.localeCompare(b.date));
   document.getElementById('schedule-list').innerHTML = sorted.length ? sorted.map(s=>scheduleHTML(s,false)).join('') : '<div class="empty-state">予定がありません</div>';
   if (schedView === 'calendar') renderCalendar();
   if (schedView === 'table') renderSchedTable();
@@ -1592,8 +1601,13 @@ function promoteIdea(id) {
 function renderDashboard() {
   const pending = data.tasks.filter(t=>t.status!=='done').slice(0,3);
   document.getElementById('dashboard-tasks').innerHTML = pending.length ? pending.map(t=>taskHTML(t,true)).join('') : '<div class="empty-state">未完了タスクなし</div>';
-  const upcoming = [...data.schedules].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,2);
-  document.getElementById('dashboard-schedule').innerHTML = upcoming.length ? upcoming.map(s=>scheduleHTML(s,true)).join('') : '<div class="empty-state">予定なし</div>';
+  const dashEnd = new Date(new Date().getTime() + 14 * 86400000).toISOString().slice(0,10);
+  const dashExpanded = expandSchedules(today(), dashEnd);
+  const upcoming = [];
+  Object.values(dashExpanded).forEach(arr => arr.forEach(s => upcoming.push(s)));
+  upcoming.sort((a,b) => a.date.localeCompare(b.date));
+  const upSlice = upcoming.filter(s => s.date >= today()).slice(0,2);
+  document.getElementById('dashboard-schedule').innerHTML = upSlice.length ? upSlice.map(s=>scheduleHTML(s,true)).join('') : '<div class="empty-state">予定なし</div>';
 }
 
 function renderAll() { updateStats(); renderTasks(); renderSchedule(); renderIdeas(); renderDashboard(); }
@@ -1624,29 +1638,16 @@ function addSchedule() {
   const recur = document.getElementById('new-sched-recur').value;
   if (!title || !date) return;
   const sub = recur ? recurLabel(recur) : '';
-  const dates = [date];
-  if (recur) {
-    const base = new Date(date);
-    for (let i = 1; i <= 8; i++) {
-      const nd = new Date(base);
-      if (recur === 'weekly') nd.setDate(nd.getDate() + 7 * i);
-      else if (recur === 'biweekly') nd.setDate(nd.getDate() + 14 * i);
-      else if (recur === 'monthly') nd.setMonth(nd.getMonth() + i);
-      dates.push(nd.toISOString().slice(0, 10));
-    }
+  const existing = data.schedules.find(s => s.date === date);
+  if (existing) {
+    existing.title = title;
+    existing.tag = tag;
+    existing.urgency = urgency;
+    existing.recur = recur;
+    existing.sub = sub || existing.sub;
+  } else {
+    data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub, recur });
   }
-  dates.forEach(dt => {
-    const existing = data.schedules.find(s => s.date === dt);
-    if (existing) {
-      existing.title = title;
-      existing.tag = tag;
-      existing.urgency = urgency;
-      existing.recur = recur;
-      existing.sub = sub || existing.sub;
-    } else {
-      data.schedules.push({ id: data.nextId++, title, date: dt, tag, urgency, sub, recur });
-    }
-  });
   document.getElementById('new-sched-title').value = '';
   document.getElementById('new-sched-recur').value = '';
   saveAndSync(); renderAll();
