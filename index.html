@@ -222,17 +222,23 @@ button:active { transform: scale(0.98); }
 .cal-cell.today .cal-cell-day-num { background: var(--purple); color: #fff; font-weight: 500; }
 .cal-cell-events { flex: 1; display: flex; flex-direction: column; gap: 1px; }
 .cal-event { font-size: 11px; padding: 2px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; font-weight: 500; }
-.cal-event.urgency-high { background: var(--red-light); color: var(--red-dark); }
-.cal-event.urgency-mid { background: var(--amber-light); color: var(--amber-dark); }
-.cal-event.urgency-low { background: var(--green-light); color: var(--green-dark); }
+.cal-event.tag-stream { background: var(--purple-light); color: var(--purple-dark); }
+.cal-event.tag-short { background: var(--teal-light); color: var(--teal-dark); }
+.cal-event.tag-edit { background: var(--amber-light); color: var(--amber-dark); }
+.cal-event.tag-other { background: var(--gray-light); color: var(--gray-dark); }
 .cal-event:hover { filter: brightness(0.92); }
 .cal-event-recur { font-size: 9px; margin-left: 3px; opacity: 0.7; }
 .cal-event-dot { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text2); padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .cal-event-dot:hover { color: var(--text); }
 .cal-event-dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.cal-event-dot.urgency-high::before { background: var(--red-dark); }
-.cal-event-dot.urgency-mid::before { background: var(--amber-dark); }
-.cal-event-dot.urgency-low::before { background: var(--green-dark); }
+.cal-event-dot.tag-stream::before { background: var(--purple-dark); }
+.cal-event-dot.tag-short::before { background: var(--teal-dark); }
+.cal-event-dot.tag-edit::before { background: var(--amber-dark); }
+.cal-event-dot.tag-other::before { background: var(--gray-dark); }
+.cal-event-dot.tag-stream { color: var(--purple-dark); }
+.cal-event-dot.tag-short { color: var(--teal-dark); }
+.cal-event-dot.tag-edit { color: var(--amber-dark); }
+.cal-event-dot.tag-other { color: var(--gray-dark); }
 .cal-inline-input { width: 100%; font-size: 11px; padding: 2px 5px; border: 1.5px solid var(--purple); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; font-family: inherit; }
 .cal-cell-add { font-size: 10px; color: var(--text3); opacity: 0; transition: opacity 0.15s; cursor: pointer; text-align: center; padding: 2px; }
 .cal-cell:hover .cal-cell-add { opacity: 0.6; }
@@ -354,6 +360,15 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
     <div class="sched-form-row">
       <label>日付</label>
       <input type="date" id="sched-edit-date" />
+    </div>
+    <div class="sched-form-row">
+      <label>カテゴリ</label>
+      <select id="sched-edit-tag">
+        <option value="stream">配信</option>
+        <option value="short">ショート</option>
+        <option value="edit">編集</option>
+        <option value="other">その他</option>
+      </select>
     </div>
     <div style="display:flex;gap:12px;">
       <div class="sched-form-row" style="flex:1;">
@@ -496,6 +511,12 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
       <div class="controls">
         <input type="text" id="new-sched-title" placeholder="予定を追加..." />
         <input type="date" id="new-sched-date" />
+        <select id="new-sched-tag">
+          <option value="stream">配信</option>
+          <option value="short">ショート</option>
+          <option value="edit">編集</option>
+          <option value="other">その他</option>
+        </select>
         <select id="new-sched-urgency">
           <option value="high">重要</option>
           <option value="mid">普通</option>
@@ -605,8 +626,8 @@ function getDefaultData() {
       { id: 3, title: 'ハイライトクリップ選定', tag: 'edit', status: 'todo', created: today() },
     ],
     schedules: [
-      { id: 4, title: '週次配信', date: '2026-06-28', urgency: 'high', sub: '毎週土曜', recur: 'weekly' },
-      { id: 5, title: 'ショート投稿', date: '2026-06-30', urgency: 'mid', sub: 'LN2 ZIP編', recur: '' },
+      { id: 4, title: '週次配信', date: '2026-06-28', urgency: 'high', sub: '毎週土曜', recur: 'weekly', tag: 'stream' },
+      { id: 5, title: 'ショート投稿', date: '2026-06-30', urgency: 'mid', sub: 'LN2 ZIP編', recur: '', tag: 'short' },
     ],
     ideas: [
       { id: 6, text: 'LN1 RTA世界記録との比較動画', tag: 'short', created: today() },
@@ -623,7 +644,7 @@ let data = (() => {
     const r = localStorage.getItem(LOCAL_KEY);
     if (!r) return getDefaultData();
     const parsed = JSON.parse(r);
-    parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; });
+    parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
     return parsed;
   } catch(e) { return getDefaultData(); }
 })();
@@ -682,7 +703,7 @@ async function loadFromGist() {
     const content = j.files?.['content-cmd.json']?.content;
     if (content) {
       data = JSON.parse(content);
-      data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; });
+      data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
       saveLocal();
       renderAll();
       setSyncStatus('ok', '同期済み');
@@ -1105,9 +1126,9 @@ function renderCalendar() {
     events.forEach(s => {
       const recurIcon = s.recur ? `<span class="cal-event-recur">↻</span>` : '';
       if (s.sub && !s.recur) {
-        html += `<div class="cal-event-dot ${urgencyClass(s.urgency)}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.sub)}</div>`;
+        html += `<div class="cal-event-dot tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.sub)}</div>`;
       } else {
-        html += `<div class="cal-event ${urgencyClass(s.urgency)}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.title)}${recurIcon}</div>`;
+        html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.title)}${recurIcon}</div>`;
       }
     });
     html += `</div>`;
@@ -1355,6 +1376,7 @@ function openSchedModal(id, dateStr) {
     titleEl.innerHTML = '<i class="ti ti-calendar-event" style="font-size:16px;"></i> 予定を編集';
     document.getElementById('sched-edit-title').value = s.title;
     document.getElementById('sched-edit-date').value = s.date;
+    document.getElementById('sched-edit-tag').value = s.tag || 'other';
     document.getElementById('sched-edit-urgency').value = s.urgency;
     document.getElementById('sched-edit-recur').value = s.recur || '';
     document.getElementById('sched-edit-sub').value = s.sub || '';
@@ -1363,6 +1385,7 @@ function openSchedModal(id, dateStr) {
     titleEl.innerHTML = '<i class="ti ti-calendar-plus" style="font-size:16px;"></i> 予定を追加';
     document.getElementById('sched-edit-title').value = '';
     document.getElementById('sched-edit-date').value = dateStr || today();
+    document.getElementById('sched-edit-tag').value = 'stream';
     document.getElementById('sched-edit-urgency').value = 'mid';
     document.getElementById('sched-edit-recur').value = '';
     document.getElementById('sched-edit-sub').value = '';
@@ -1380,6 +1403,7 @@ function closeSchedModal() {
 function saveSchedFromModal() {
   const title = document.getElementById('sched-edit-title').value.trim();
   const date = document.getElementById('sched-edit-date').value;
+  const tag = document.getElementById('sched-edit-tag').value;
   const urgency = document.getElementById('sched-edit-urgency').value;
   const recur = document.getElementById('sched-edit-recur').value;
   const sub = document.getElementById('sched-edit-sub').value.trim();
@@ -1390,6 +1414,7 @@ function saveSchedFromModal() {
     if (s) {
       s.title = title;
       s.date = date;
+      s.tag = tag;
       s.urgency = urgency;
       s.recur = recur;
       s.sub = sub || (recur ? recurLabel(recur) : '');
@@ -1397,7 +1422,7 @@ function saveSchedFromModal() {
   } else {
     data.schedules.push({
       id: data.nextId++,
-      title, date, urgency, recur,
+      title, date, tag, urgency, recur,
       sub: sub || (recur ? recurLabel(recur) : '')
     });
   }
@@ -1476,6 +1501,7 @@ function scheduleHTML(s, compact) {
     <div class="schedule-info">
       <div class="schedule-title" id="sched-title-${s.id}" ${editClick} ${compact?'':`style="cursor:text;" title="ダブルクリックで編集"`}>${esc(s.title)}</div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;">
+        <span class="tag ${tagClass(s.tag||'other')}">${esc(tagLabel(s.tag||'other'))}</span>
         ${s.sub?`<span class="schedule-sub" style="margin:0;">${esc(s.sub)}</span>`:''}
         ${recurBadge}
         ${dateInput}
@@ -1567,11 +1593,12 @@ function deleteTask(id) { data.tasks = data.tasks.filter(t=>t.id!==id); saveAndS
 function addSchedule() {
   const title = document.getElementById('new-sched-title').value.trim();
   const date = document.getElementById('new-sched-date').value;
+  const tag = document.getElementById('new-sched-tag').value;
   const urgency = document.getElementById('new-sched-urgency').value;
   const recur = document.getElementById('new-sched-recur').value;
   if (!title || !date) return;
   const sub = recur ? recurLabel(recur) : '';
-  data.schedules.push({ id: data.nextId++, title, date, urgency, sub, recur });
+  data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub, recur });
   document.getElementById('new-sched-title').value = '';
   document.getElementById('new-sched-recur').value = '';
   saveAndSync(); renderAll();
