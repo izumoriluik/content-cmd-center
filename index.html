@@ -376,9 +376,20 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
         </select>
       </div>
     </div>
-    <div class="sched-form-row">
-      <label>期限日</label>
-      <input type="date" id="task-edit-due" />
+    <div style="display:flex;gap:12px;">
+      <div class="sched-form-row" style="flex:1;">
+        <label>期限日</label>
+        <input type="date" id="task-edit-due" />
+      </div>
+      <div class="sched-form-row" style="flex:1;">
+        <label>繰り返し</label>
+        <select id="task-edit-recur">
+          <option value="">なし</option>
+          <option value="weekly">毎週</option>
+          <option value="biweekly">隔週</option>
+          <option value="monthly">毎月</option>
+        </select>
+      </div>
     </div>
     <div class="sched-modal-actions">
       <button onclick="deleteTaskFromModal()" style="color:var(--red-dark);border-color:var(--red-light);"><i class="ti ti-trash"></i> 削除</button>
@@ -532,6 +543,12 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
           <option value="other">その他</option>
         </select>
         <input type="date" id="new-task-due" title="期限日" />
+        <select id="new-task-recur" title="繰り返し">
+          <option value="">繰り返しなし</option>
+          <option value="weekly">毎週</option>
+          <option value="biweekly">隔週</option>
+          <option value="monthly">毎月</option>
+        </select>
         <button class="btn-primary" onclick="addTask()"><i class="ti ti-plus"></i> 追加</button>
       </div>
       <div class="controls" style="margin-bottom:1rem;">
@@ -1551,7 +1568,7 @@ function renderKanban() {
           <div class="kanban-card-title">${esc(t.title)}</div>
           <div class="kanban-card-meta">
             <span class="tag ${tagClass(t.tag)}">${esc(tagLabel(t.tag))}</span>
-            <span class="task-date">${t.due?'〆 '+t.due:t.created||''}</span>
+            <span class="task-date">${t.due?'〆 '+t.due:t.created||''}</span>${t.recur?`<span class="recur-badge"><i class="ti ti-repeat" style="font-size:11px;"></i> ${esc(recurLabel(t.recur))}</span>`:''}
           </div>
         </div>`).join('')}
         ${tasks.length===0?'<div class="empty-state" style="padding:1rem;">なし</div>':''}
@@ -1575,7 +1592,7 @@ function taskHTML(t, compact) {
       <div class="task-meta">
         <span class="tag ${tagClass(t.tag)} ${compact?'':'clickable'}" ${tagClick} ${compact?'':`title="クリックで変更"`}>${esc(tagLabel(t.tag))}</span>
         <span class="inline-select"><span class="task-status ${statusClass(t.status)} ${compact?'':'clickable'}" ${statusClick} ${compact?'':`style="cursor:pointer;" title="クリックで変更"`}>${esc(statusLabel(t.status))}</span></span>
-        <span class="task-date">${t.due?'〆 '+t.due:t.created||''}</span>
+        <span class="task-date">${t.due?'〆 '+t.due:t.created||''}</span>${t.recur?`<span class="recur-badge"><i class="ti ti-repeat" style="font-size:11px;"></i> ${esc(recurLabel(t.recur))}</span>`:''}
       </div>
     </div>
     ${!compact?`<button class="icon-btn" onclick="openTaskModal(${t.id})" title="編集"><i class="ti ti-edit"></i></button><button class="icon-btn" onclick="deleteTask(${t.id})" title="削除"><i class="ti ti-trash"></i></button>`:''}
@@ -1683,18 +1700,36 @@ function addTask() {
   const title = document.getElementById('new-task-title').value.trim();
   const tag = document.getElementById('new-task-tag').value;
   const due = document.getElementById('new-task-due').value || '';
+  const recur = document.getElementById('new-task-recur').value || '';
   if (!title) return;
-  data.tasks.unshift({ id: data.nextId++, title, tag, status: 'todo', created: today(), due });
+  data.tasks.unshift({ id: data.nextId++, title, tag, status: 'todo', created: today(), due, recur });
   document.getElementById('new-task-title').value = '';
   document.getElementById('new-task-due').value = '';
+  document.getElementById('new-task-recur').value = '';
   saveAndSync(); renderAll();
 }
 
 function cycleStatus(id) {
   const t = data.tasks.find(x=>x.id===id);
   if (!t) return;
+  const prev = t.status;
   t.status = { todo:'wip', wip:'done', done:'todo' }[t.status];
+  if (t.status === 'done' && t.recur && t.due) {
+    spawnNextRecurTask(t);
+  }
   saveAndSync(); renderAll();
+}
+
+function spawnNextRecurTask(t) {
+  const d = new Date(t.due);
+  if (t.recur === 'weekly') d.setDate(d.getDate() + 7);
+  else if (t.recur === 'biweekly') d.setDate(d.getDate() + 14);
+  else if (t.recur === 'monthly') d.setMonth(d.getMonth() + 1);
+  const nextDue = d.toISOString().slice(0, 10);
+  const exists = data.tasks.some(x => x.title === t.title && x.due === nextDue && x.id !== t.id);
+  if (!exists) {
+    data.tasks.unshift({ id: data.nextId++, title: t.title, tag: t.tag, status: 'todo', created: today(), due: nextDue, recur: t.recur });
+  }
 }
 
 function deleteTask(id) { data.tasks = data.tasks.filter(t=>t.id!==id); saveAndSync(); renderAll(); }
@@ -1709,6 +1744,7 @@ function openTaskModal(id) {
   document.getElementById('task-edit-tag').value = t.tag;
   document.getElementById('task-edit-status').value = t.status;
   document.getElementById('task-edit-due').value = t.due || '';
+  document.getElementById('task-edit-recur').value = t.recur || '';
   document.getElementById('task-edit-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('task-edit-title').focus(), 50);
 }
@@ -1721,10 +1757,15 @@ function closeTaskModal() {
 function saveTaskFromModal() {
   const t = data.tasks.find(x => x.id === editingTaskId);
   if (!t) return;
+  const prevStatus = t.status;
   t.title = document.getElementById('task-edit-title').value.trim() || t.title;
   t.tag = document.getElementById('task-edit-tag').value;
   t.status = document.getElementById('task-edit-status').value;
   t.due = document.getElementById('task-edit-due').value || '';
+  t.recur = document.getElementById('task-edit-recur').value || '';
+  if (t.status === 'done' && prevStatus !== 'done' && t.recur && t.due) {
+    spawnNextRecurTask(t);
+  }
   saveAndSync(); renderAll(); closeTaskModal();
 }
 
