@@ -361,6 +361,16 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
       <label>日付</label>
       <input type="date" id="sched-edit-date" />
     </div>
+    <div style="display:flex;gap:12px;">
+      <div class="sched-form-row" style="flex:1;">
+        <label>開始時間</label>
+        <input type="time" id="sched-edit-start" />
+      </div>
+      <div class="sched-form-row" style="flex:1;">
+        <label>終了時間</label>
+        <input type="time" id="sched-edit-end" />
+      </div>
+    </div>
     <div class="sched-form-row">
       <label>カテゴリ</label>
       <select id="sched-edit-tag">
@@ -480,6 +490,7 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
           <option value="edit">編集</option>
           <option value="other">その他</option>
         </select>
+        <input type="date" id="new-task-due" title="期限日" />
         <button class="btn-primary" onclick="addTask()"><i class="ti ti-plus"></i> 追加</button>
       </div>
       <div class="controls" style="margin-bottom:1rem;">
@@ -517,6 +528,8 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
           <option value="edit">編集</option>
           <option value="other">その他</option>
         </select>
+        <input type="time" id="new-sched-start" title="開始時間" style="width:auto;" />
+        <input type="time" id="new-sched-end" title="終了時間" style="width:auto;" />
         <select id="new-sched-urgency">
           <option value="high">重要</option>
           <option value="mid">普通</option>
@@ -1153,7 +1166,8 @@ function renderCalendar() {
       if (s.sub && !s.recur) {
         html += `<div class="cal-event-dot tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.sub)}</div>`;
       } else {
-        html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.title)}${recurIcon}</div>`;
+        const timeStr = s.startTime ? `${s.startTime} ` : '';
+        html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s.startTime?' '+s.startTime+(s.endTime?'〜'+s.endTime:''):''}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${timeStr}${esc(s.title)}${recurIcon}</div>`;
       }
     });
     html += `</div>`;
@@ -1402,6 +1416,8 @@ function openSchedModal(id, dateStr) {
     document.getElementById('sched-edit-title').value = s.title;
     document.getElementById('sched-edit-date').value = s.date;
     document.getElementById('sched-edit-tag').value = s.tag || 'other';
+    document.getElementById('sched-edit-start').value = s.startTime || '';
+    document.getElementById('sched-edit-end').value = s.endTime || '';
     document.getElementById('sched-edit-urgency').value = s.urgency;
     document.getElementById('sched-edit-recur').value = s.recur || '';
     document.getElementById('sched-edit-sub').value = s.sub || '';
@@ -1411,6 +1427,8 @@ function openSchedModal(id, dateStr) {
     document.getElementById('sched-edit-title').value = '';
     document.getElementById('sched-edit-date').value = dateStr || today();
     document.getElementById('sched-edit-tag').value = 'stream';
+    document.getElementById('sched-edit-start').value = '';
+    document.getElementById('sched-edit-end').value = '';
     document.getElementById('sched-edit-urgency').value = 'mid';
     document.getElementById('sched-edit-recur').value = '';
     document.getElementById('sched-edit-sub').value = '';
@@ -1429,6 +1447,8 @@ function saveSchedFromModal() {
   const title = document.getElementById('sched-edit-title').value.trim();
   const date = document.getElementById('sched-edit-date').value;
   const tag = document.getElementById('sched-edit-tag').value;
+  const startTime = document.getElementById('sched-edit-start').value || '';
+  const endTime = document.getElementById('sched-edit-end').value || '';
   const urgency = document.getElementById('sched-edit-urgency').value;
   const recur = document.getElementById('sched-edit-recur').value;
   const sub = document.getElementById('sched-edit-sub').value.trim();
@@ -1441,6 +1461,8 @@ function saveSchedFromModal() {
       s.title = title;
       s.date = date;
       s.tag = tag;
+      s.startTime = startTime;
+      s.endTime = endTime;
       s.urgency = urgency;
       s.recur = recur;
       s.sub = subVal;
@@ -1450,11 +1472,13 @@ function saveSchedFromModal() {
     if (existing) {
       existing.title = title;
       existing.tag = tag;
+      existing.startTime = startTime;
+      existing.endTime = endTime;
       existing.urgency = urgency;
       existing.recur = recur;
       existing.sub = subVal;
     } else {
-      data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub: subVal, recur });
+      data.schedules.push({ id: data.nextId++, title, date, tag, startTime, endTime, urgency, sub: subVal, recur });
     }
   }
   saveAndSync(); renderAll(); closeSchedModal();
@@ -1486,7 +1510,7 @@ function renderKanban() {
           <div class="kanban-card-title">${esc(t.title)}</div>
           <div class="kanban-card-meta">
             <span class="tag ${tagClass(t.tag)}">${esc(tagLabel(t.tag))}</span>
-            <span class="task-date">${t.created||''}</span>
+            <span class="task-date">${t.due?'〆 '+t.due:t.created||''}</span>
           </div>
         </div>`).join('')}
         ${tasks.length===0?'<div class="empty-state" style="padding:1rem;">なし</div>':''}
@@ -1510,7 +1534,7 @@ function taskHTML(t, compact) {
       <div class="task-meta">
         <span class="tag ${tagClass(t.tag)} ${compact?'':'clickable'}" ${tagClick} ${compact?'':`title="クリックで変更"`}>${esc(tagLabel(t.tag))}</span>
         <span class="inline-select"><span class="task-status ${statusClass(t.status)} ${compact?'':'clickable'}" ${statusClick} ${compact?'':`style="cursor:pointer;" title="クリックで変更"`}>${esc(statusLabel(t.status))}</span></span>
-        <span class="task-date">${t.created||''}</span>
+        <span class="task-date">${t.due?'〆 '+t.due:t.created||''}</span>
       </div>
     </div>
     ${!compact?`<button class="icon-btn" onclick="deleteTask(${t.id})" title="削除"><i class="ti ti-trash"></i></button>`:''}
@@ -1530,7 +1554,7 @@ function scheduleHTML(s, compact) {
       <div class="schedule-day">${d.getDate()}</div>
     </div>
     <div class="schedule-info">
-      <div class="schedule-title" id="sched-title-${s.id}" ${editClick} ${compact?'':`style="cursor:text;" title="ダブルクリックで編集"`}>${esc(s.title)}</div>
+      <div class="schedule-title" id="sched-title-${s.id}" ${editClick} ${compact?'':`style="cursor:text;" title="ダブルクリックで編集"`}>${esc(s.title)}${s.startTime?` <span style="font-size:11px;font-weight:400;color:var(--text2);">${s.startTime}${s.endTime?'〜'+s.endTime:''}</span>`:''}</div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;">
         <span class="tag ${tagClass(s.tag||'other')}">${esc(tagLabel(s.tag||'other'))}</span>
         ${s.sub?`<span class="schedule-sub" style="margin:0;">${esc(s.sub)}</span>`:''}
@@ -1617,9 +1641,11 @@ function renderAll() { updateStats(); renderTasks(); renderSchedule(); renderIde
 function addTask() {
   const title = document.getElementById('new-task-title').value.trim();
   const tag = document.getElementById('new-task-tag').value;
+  const due = document.getElementById('new-task-due').value || '';
   if (!title) return;
-  data.tasks.unshift({ id: data.nextId++, title, tag, status: 'todo', created: today() });
+  data.tasks.unshift({ id: data.nextId++, title, tag, status: 'todo', created: today(), due });
   document.getElementById('new-task-title').value = '';
+  document.getElementById('new-task-due').value = '';
   saveAndSync(); renderAll();
 }
 
@@ -1636,6 +1662,8 @@ function addSchedule() {
   const title = document.getElementById('new-sched-title').value.trim();
   const date = document.getElementById('new-sched-date').value;
   const tag = document.getElementById('new-sched-tag').value;
+  const startTime = document.getElementById('new-sched-start').value || '';
+  const endTime = document.getElementById('new-sched-end').value || '';
   const urgency = document.getElementById('new-sched-urgency').value;
   const recur = document.getElementById('new-sched-recur').value;
   if (!title || !date) return;
@@ -1644,13 +1672,17 @@ function addSchedule() {
   if (existing) {
     existing.title = title;
     existing.tag = tag;
+    existing.startTime = startTime;
+    existing.endTime = endTime;
     existing.urgency = urgency;
     existing.recur = recur;
     existing.sub = sub || existing.sub;
   } else {
-    data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub, recur });
+    data.schedules.push({ id: data.nextId++, title, date, tag, startTime, endTime, urgency, sub, recur });
   }
   document.getElementById('new-sched-title').value = '';
+  document.getElementById('new-sched-start').value = '';
+  document.getElementById('new-sched-end').value = '';
   document.getElementById('new-sched-recur').value = '';
   saveAndSync(); renderAll();
 }
