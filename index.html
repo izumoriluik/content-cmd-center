@@ -1598,7 +1598,16 @@ function addSchedule() {
   const recur = document.getElementById('new-sched-recur').value;
   if (!title || !date) return;
   const sub = recur ? recurLabel(recur) : '';
-  data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub, recur });
+  const existing = data.schedules.find(s => s.date === date);
+  if (existing) {
+    existing.title = title;
+    existing.tag = tag;
+    existing.urgency = urgency;
+    existing.recur = recur;
+    existing.sub = sub || existing.sub;
+  } else {
+    data.schedules.push({ id: data.nextId++, title, date, tag, urgency, sub, recur });
+  }
   document.getElementById('new-sched-title').value = '';
   document.getElementById('new-sched-recur').value = '';
   saveAndSync(); renderAll();
