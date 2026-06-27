@@ -841,6 +841,8 @@ let gcalCalendarId = localStorage.getItem('gcal_calendar_id') || 'primary';
 let gcalToken = '';            // アクセストークン（メモリのみ・localStorageには保存しない）
 let gcalTokenClient = null;
 let gcalReconcileTimer = null;
+let gcalRefreshTimer = null;
+let gcalPullTimer = null;
 const GCAL_TZ = 'Asia/Tokyo';
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 let taskView = 'list';
@@ -968,6 +970,21 @@ function gcalSetStatus(txt, cls) {
   if (el) { el.textContent = txt; el.style.color = cls === 'ok' ? 'var(--green-dark,#2e8b57)' : cls === 'err' ? 'var(--red-dark,#c0392b)' : 'var(--text3)'; }
 }
 
+// 期限の少し前に無音でトークンを更新（開いている間は繋ぎっぱなしに）
+function gcalScheduleRefresh(expiresInSec) {
+  clearTimeout(gcalRefreshTimer);
+  const ms = Math.max(60, (expiresInSec || 3600) - 120) * 1000;
+  gcalRefreshTimer = setTimeout(() => {
+    if (gcalTokenClient) { try { gcalTokenClient.requestAccessToken({ prompt: '' }); } catch(e) {} }
+  }, ms);
+}
+
+// 開いている間、定期的にGoogle側の変更を取り込む（10分毎）
+function gcalStartAutoPull() {
+  clearInterval(gcalPullTimer);
+  gcalPullTimer = setInterval(() => { if (gcalConnected()) gcalPull(); }, 10 * 60 * 1000);
+}
+
 function gcalInitClient() {
   if (!gcalClientId) return false;
   if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return false;
@@ -976,13 +993,32 @@ function gcalInitClient() {
     scope: GCAL_SCOPE,
     callback: (resp) => {
       if (resp && resp.access_token) {
+        const first = !gcalToken;
         gcalToken = resp.access_token;
         gcalSetStatus('接続済み', 'ok');
-        gcalAfterConnect();
+        gcalScheduleRefresh(resp.expires_in);
+        gcalStartAutoPull();
+        if (first) gcalAfterConnect();   // 初回のみ取り込み→送信
+        else gcalReconcile();            // 更新時は差分送信のみ（変化なければAPI呼ばない）
       } else { gcalSetStatus('認証失敗', 'err'); }
+    },
+    error_callback: () => {
+      // 無音接続が失敗（未同意/ログインセッション無し等）→「接続」ボタン待ちにフォールバック
+      gcalSetStatus('未接続（「接続」を押してください）', '');
     },
   });
   return true;
+}
+
+// ページを開いたら自動で静かに接続（GISの読み込みを待ってリトライ）
+function gcalAutoConnect(retries) {
+  if (!gcalClientId) return;
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+    if ((retries || 0) < 20) setTimeout(() => gcalAutoConnect((retries || 0) + 1), 500);
+    return;
+  }
+  if (!gcalTokenClient) gcalInitClient();
+  if (gcalTokenClient) { gcalSetStatus('自動接続中...', ''); try { gcalTokenClient.requestAccessToken({ prompt: '' }); } catch(e) {} }
 }
 
 function gcalConnect() {
@@ -2432,7 +2468,8 @@ if (document.getElementById('settings-token')) document.getElementById('settings
 if (gcalClientId) {
   const gcEl = document.getElementById('gcal-client-id');
   if (gcEl) gcEl.value = gcalClientId;
-  gcalSetStatus('未接続（クライアントID設定済み・接続を押してください）', '');
+  gcalSetStatus('自動接続中...', '');
+  gcalAutoConnect();   // 開いたら裏で静かに接続→自動同期（失敗時のみボタン待ち）
 }
 updateGistDisplay();
 
