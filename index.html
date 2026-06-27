@@ -996,6 +996,7 @@ function gcalInitClient() {
       if (resp && resp.access_token) {
         const first = !gcalToken;
         gcalToken = resp.access_token;
+        try { localStorage.setItem('gcal_token', resp.access_token); localStorage.setItem('gcal_token_exp', String(Date.now() + ((resp.expires_in || 3600) * 1000))); } catch(e) {}
         gcalSetStatus('接続済み', 'ok');
         gcalScheduleRefresh(resp.expires_in);
         gcalStartAutoPull();
@@ -1009,6 +1010,21 @@ function gcalInitClient() {
     },
   });
   return true;
+}
+
+// 保存済みトークンが有効なら再認証せずに復帰（リロードでポップアップを出さない）
+function gcalRestoreToken() {
+  const t = localStorage.getItem('gcal_token');
+  const exp = parseInt(localStorage.getItem('gcal_token_exp') || '0', 10);
+  if (t && Date.now() < exp - 60000) {
+    gcalToken = t;
+    gcalSetStatus('接続済み', 'ok');
+    gcalScheduleRefresh(Math.floor((exp - Date.now()) / 1000));
+    gcalStartAutoPull();
+    gcalPull();   // 取り込みだけ静かに実行
+    return true;
+  }
+  return false;
 }
 
 // ページを開いたら自動で静かに接続（GISの読み込みを待ってリトライ）
@@ -1046,6 +1062,8 @@ function gcalConnect() {
 function gcalDisconnect() {
   try { if (gcalToken && typeof google !== 'undefined' && google.accounts) google.accounts.oauth2.revoke(gcalToken, () => {}); } catch(e) {}
   gcalToken = '';
+  clearTimeout(gcalRefreshTimer); clearInterval(gcalPullTimer);
+  localStorage.removeItem('gcal_token'); localStorage.removeItem('gcal_token_exp');
   gcalSetStatus('未接続', '');
 }
 
@@ -2478,8 +2496,10 @@ if (document.getElementById('settings-token')) document.getElementById('settings
 if (gcalClientId) {
   const gcEl = document.getElementById('gcal-client-id');
   if (gcEl) gcEl.value = gcalClientId;
-  gcalSetStatus('自動接続中...', '');
-  gcalAutoConnect();   // 開いたら裏で静かに接続→自動同期（失敗時のみボタン待ち）
+  if (!gcalRestoreToken()) {   // 有効な保存トークンがあれば再認証しない
+    gcalSetStatus('自動接続中...', '');
+    gcalAutoConnect();         // 無ければ裏で静かに接続（失敗時のみボタン待ち）
+  }
 }
 updateGistDisplay();
 
