@@ -306,40 +306,48 @@ button:active { transform: scale(0.98); }
 .idea-promote { font-size: 11px; color: var(--purple-dark); background: var(--purple-light); border: none; padding: 3px 10px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
 .idea-promote:hover { opacity: 0.8; }
 
-/* Shorts (spreadsheet) */
-.short-table-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius); }
-.short-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 760px; }
-.short-table th { background: var(--bg2); color: var(--text2); font-weight: 500; font-size: 11px; text-align: left; padding: 8px 10px; border-bottom: 0.5px solid var(--border); white-space: nowrap; position: sticky; top: 0; }
-.short-table td { padding: 6px 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
-.short-table tr:hover td { background: var(--bg2); }
-.short-table tr.tech-start td { border-top: 1.5px solid var(--border2); }
-.short-num { color: var(--text3); font-size: 11px; width: 26px; text-align: right; }
-.short-tech-cell { color: var(--text2); font-size: 11px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+/* Shorts (drill-down) */
 .short-angle { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
 .angle-shock { background: var(--red-light); color: var(--red-dark); }
 .angle-howto { background: var(--blue-light); color: var(--blue-dark); }
 .angle-tips { background: var(--amber-light); color: var(--amber-dark); }
-.short-title-input { width: 100%; min-width: 200px; padding: 4px 6px; border: 0.5px solid transparent; border-radius: 4px; background: transparent; color: var(--text); font-size: 12px; font-family: inherit; }
-.short-title-input:hover { border-color: var(--border); }
-.short-title-input:focus { outline: none; border-color: var(--purple); background: var(--bg); }
 .short-status-pill { font-size: 10px; padding: 2px 9px; border-radius: 20px; cursor: pointer; font-weight: 500; white-space: nowrap; }
 .short-status-pill:hover { opacity: 0.8; }
 .sst-idea { background: var(--gray-light); color: var(--gray-dark); }
 .sst-film { background: var(--purple-light); color: var(--purple-dark); }
 .sst-edit { background: var(--amber-light); color: var(--amber-dark); }
 .sst-posted { background: var(--green-light); color: var(--green-dark); }
-.short-cell-input { width: 100%; padding: 4px 6px; border: 0.5px solid transparent; border-radius: 4px; background: transparent; color: var(--text); font-size: 12px; font-family: inherit; }
-.short-cell-input:hover { border-color: var(--border); }
-.short-cell-input:focus { outline: none; border-color: var(--purple); background: var(--bg); }
-.short-views-cell { width: 70px; }
-.short-ret-cell { width: 150px; }
-.short-script-btn { background: none; border: 0.5px solid var(--border); border-radius: 4px; padding: 3px 7px; font-size: 11px; color: var(--text2); cursor: pointer; white-space: nowrap; }
-.short-script-btn:hover { background: var(--bg); border-color: var(--border2); }
-.short-script-btn.has-script { color: var(--purple); border-color: var(--purple-light); }
-.short-script-row td { padding: 0 10px 10px; }
-.short-script { width: 100%; min-height: 120px; resize: vertical; padding: 8px 10px; border: 0.5px solid var(--purple); border-radius: var(--radius); background: var(--bg2); color: var(--text); font-size: 12px; font-family: inherit; line-height: 1.7; }
-.short-script:focus { outline: none; }
-.short-table .icon-btn { font-size: 13px; }
+.short-cell-input { padding: 5px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit; }
+.short-cell-input:focus { outline: none; border-color: var(--purple); }
+/* Level 1: list */
+.sg-list { display: flex; flex-direction: column; gap: 4px; }
+.sg-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: border-color 0.1s, background 0.1s; }
+.sg-row:hover { border-color: var(--border2); background: var(--bg2); }
+.sg-num { font-size: 12px; color: var(--text3); width: 20px; text-align: center; flex-shrink: 0; }
+.sg-main { flex: 1; min-width: 0; }
+.sg-title { font-size: 13px; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sg-sub { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.sg-tech { font-size: 11px; color: var(--text3); }
+.sg-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sg-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: var(--purple-light); color: var(--purple-dark); font-weight: 500; }
+.sg-posted { font-size: 10px; color: var(--text3); }
+.sg-chev { color: var(--text3); font-size: 16px; flex-shrink: 0; }
+/* Level 2: detail */
+.sd-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sd-back { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 5px 10px; font-size: 12px; color: var(--text2); cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+.sd-back:hover { background: var(--bg2); }
+.sd-title { font-size: 14px; font-weight: 500; color: var(--text); flex: 1; }
+.sd-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.sd-tab { padding: 6px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text2); font-size: 12px; cursor: pointer; transition: all 0.1s; }
+.sd-tab.active { background: var(--purple); color: #fff; border-color: var(--purple); font-weight: 500; }
+.sd-tab:not(.active):hover { background: var(--bg2); }
+.sd-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.sd-edit-btn { background: none; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 5px 12px; font-size: 12px; color: var(--text2); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.sd-edit-btn:hover { background: var(--bg2); }
+.sd-script { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; font-size: 13px; line-height: 1.9; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+.sd-empty { color: var(--text3); }
+.sd-script-edit { width: 100%; min-height: 280px; resize: vertical; padding: 16px 18px; border: 0.5px solid var(--purple); border-radius: var(--radius-lg); background: var(--bg2); color: var(--text); font-size: 13px; font-family: inherit; line-height: 1.9; }
+.sd-script-edit:focus { outline: none; }
 
 /* AI */
 .ai-chat { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; max-height: 400px; overflow-y: auto; padding-right: 4px; }
@@ -678,7 +686,7 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
         <button class="btn-primary" onclick="addShort()"><i class="ti ti-plus"></i> 追加</button>
       </div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
-        状態をクリックで進行（企画→撮影→編集→投稿済）。タイトル・再生数・維持率メモは直接編集。「台本」ボタンで台本を開閉。
+        一覧から行をタップ → 台本ビュー。複数パターン（A/B/C）はタブで切替。状態クリックで進行、編集ボタンで台本を書き換え。
       </div>
       <div id="shorts-list"></div>
     </div>
@@ -1773,46 +1781,93 @@ function angleLabel(a) { return a==='shock'?'衝撃版':a==='howto'?'解説版':
 function shortStatusClass(s) { return s==='posted'?'sst-posted':s==='edit'?'sst-edit':s==='film'?'sst-film':'sst-idea'; }
 function shortStatusLabel(s) { return s==='posted'?'投稿済':s==='edit'?'編集':s==='film'?'撮影':'企画'; }
 
-let openScriptId = null;
+let shortsDetailKey = null;
+let shortsTabId = null;
+let shortsEditMode = false;
+
+function techShort(t) { return (t || '').split('（')[0]; }
+function patternLabel(s) {
+  const m = (s.title || '').match(/【([^】]+)】/);
+  return m ? m[1] : (s.title || angleLabel(s.angle));
+}
+function shortGroups() {
+  const order = [], map = {};
+  data.shorts.forEach(s => {
+    const k = s.tech + '|' + s.angle;
+    if (!map[k]) { map[k] = []; order.push(k); }
+    map[k].push(s);
+  });
+  return order.map(k => ({ key: k, items: map[k] }));
+}
 
 function renderShorts() {
   const el = document.getElementById('shorts-list');
   if (!data.shorts || !data.shorts.length) { el.innerHTML = '<div class="empty-state">ショートがありません</div>'; return; }
-  let rows = '';
-  let prevTech = null;
-  data.shorts.forEach((s, idx) => {
-    const techStart = s.tech !== prevTech;
-    prevTech = s.tech;
-    const hasScript = (s.script || '').trim().length > 0;
-    rows += `<tr class="${techStart?'tech-start':''}">
-      <td class="short-num">${idx+1}</td>
-      <td class="short-tech-cell" title="${esc(s.tech)}">${techStart?esc(s.tech):''}</td>
-      <td><span class="short-angle ${angleClass(s.angle)}">${angleLabel(s.angle)}</span></td>
-      <td><input class="short-title-input" type="text" value="${esc(s.title||'')}" placeholder="タイトル..." onchange="updateShortField(${s.id},'title',this.value)" /></td>
-      <td><span class="short-status-pill ${shortStatusClass(s.status)}" onclick="cycleShortStatus(${s.id})" title="クリックで進行">${shortStatusLabel(s.status)}</span></td>
-      <td><input class="short-cell-input short-views-cell" type="text" value="${esc(s.views||'')}" placeholder="再生数" onchange="updateShortField(${s.id},'views',this.value)" /></td>
-      <td><input class="short-cell-input short-ret-cell" type="text" value="${esc(s.retention||'')}" placeholder="維持率メモ" onchange="updateShortField(${s.id},'retention',this.value)" /></td>
-      <td><button class="short-script-btn ${hasScript?'has-script':''}" onclick="toggleScript(${s.id})"><i class="ti ti-file-text" style="font-size:12px;"></i> 台本</button></td>
-      <td><button class="icon-btn" onclick="deleteShort(${s.id})" title="削除"><i class="ti ti-trash"></i></button></td>
-    </tr>`;
-    if (openScriptId === s.id) {
-      rows += `<tr class="short-script-row"><td colspan="9">
-        <textarea class="short-script" placeholder="台本をここに貼り付け / 編集..." onchange="updateShortField(${s.id},'script',this.value)">${esc(s.script||'')}</textarea>
-      </td></tr>`;
-    }
-  });
-  el.innerHTML = `<div class="short-table-wrap"><table class="short-table">
-    <thead><tr>
-      <th></th><th>技</th><th>切り口</th><th>タイトル</th><th>状態</th><th>再生数</th><th>維持率メモ</th><th>台本</th><th></th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table></div>`;
+  if (shortsDetailKey) renderShortDetail(el); else renderShortList(el);
 }
 
-function toggleScript(id) {
-  openScriptId = (openScriptId === id) ? null : id;
+function renderShortList(el) {
+  const groups = shortGroups();
+  const rows = groups.map((g, i) => {
+    const items = g.items, head = items[0];
+    const multi = items.length > 1;
+    const label = multi ? `${esc(techShort(head.tech))}　${angleLabel(head.angle)}` : esc(head.title || `${techShort(head.tech)} ${angleLabel(head.angle)}`);
+    const posted = items.filter(s => s.status === 'posted').length;
+    const right = multi
+      ? `<span class="sg-badge">${items.length}択</span><span class="sg-posted">投稿${posted}/${items.length}</span>`
+      : `<span class="short-status-pill ${shortStatusClass(head.status)}">${shortStatusLabel(head.status)}</span>`;
+    return `<div class="sg-row" onclick="openShortGroup(${i})">
+      <div class="sg-num">${i+1}</div>
+      <div class="sg-main">
+        <div class="sg-title">${label}</div>
+        <div class="sg-sub"><span class="short-angle ${angleClass(head.angle)}">${angleLabel(head.angle)}</span><span class="sg-tech">${esc(techShort(head.tech))}</span></div>
+      </div>
+      <div class="sg-meta">${right}</div>
+      <i class="ti ti-chevron-right sg-chev"></i>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="sg-list">${rows}</div>`;
+}
+
+function renderShortDetail(el) {
+  const g = shortGroups().find(x => x.key === shortsDetailKey);
+  if (!g) { shortsDetailKey = null; return renderShorts(); }
+  const items = g.items, head = items[0];
+  if (!shortsTabId || !items.find(s => s.id === shortsTabId)) shortsTabId = items[0].id;
+  const cur = items.find(s => s.id === shortsTabId);
+  const tabs = items.length > 1
+    ? `<div class="sd-tabs">${items.map(s => `<button class="sd-tab ${s.id===shortsTabId?'active':''}" onclick="selectShortTab(${s.id})">${esc(patternLabel(s))}</button>`).join('')}</div>`
+    : '';
+  const body = shortsEditMode
+    ? `<textarea class="sd-script-edit" placeholder="台本をここに書く / 貼り付け..." onchange="updateShortField(${cur.id},'script',this.value)">${esc(cur.script||'')}</textarea>`
+    : `<div class="sd-script">${cur.script ? esc(cur.script) : '<span class="sd-empty">台本はまだありません。「編集」から追加できます。</span>'}</div>`;
+  el.innerHTML = `
+    <div class="sd-head">
+      <button class="sd-back" onclick="closeShortGroup()"><i class="ti ti-chevron-left"></i> 一覧</button>
+      <div class="sd-title">${esc(techShort(head.tech))}　${angleLabel(head.angle)}</div>
+      <button class="icon-btn" onclick="deleteShort(${cur.id})" title="このパターンを削除"><i class="ti ti-trash"></i></button>
+    </div>
+    ${tabs}
+    <div class="sd-meta">
+      <span class="short-status-pill ${shortStatusClass(cur.status)}" onclick="cycleShortStatus(${cur.id})" title="クリックで進行">${shortStatusLabel(cur.status)}</span>
+      <input class="short-cell-input" style="width:90px;border-color:var(--border);" value="${esc(cur.views||'')}" placeholder="再生数" onchange="updateShortField(${cur.id},'views',this.value)" />
+      <input class="short-cell-input" style="flex:1;border-color:var(--border);" value="${esc(cur.retention||'')}" placeholder="維持率メモ" onchange="updateShortField(${cur.id},'retention',this.value)" />
+      <button class="sd-edit-btn" onclick="toggleShortEdit()">${shortsEditMode?'<i class="ti ti-eye"></i> 読む':'<i class="ti ti-edit"></i> 編集'}</button>
+    </div>
+    ${body}`;
+}
+
+function openShortGroup(i) {
+  const g = shortGroups()[i];
+  if (!g) return;
+  shortsDetailKey = g.key;
+  shortsTabId = g.items[0].id;
+  shortsEditMode = false;
   renderShorts();
 }
+function closeShortGroup() { shortsDetailKey = null; shortsEditMode = false; renderShorts(); }
+function selectShortTab(id) { shortsTabId = id; shortsEditMode = false; renderShorts(); }
+function toggleShortEdit() { shortsEditMode = !shortsEditMode; renderShorts(); }
 
 function addShort() {
   const tech = document.getElementById('new-short-tech').value.trim();
@@ -1838,7 +1893,11 @@ function updateShortField(id, field, val) {
   saveAndSync();
 }
 
-function deleteShort(id) { data.shorts = data.shorts.filter(s => s.id !== id); saveAndSync(); renderShorts(); }
+function deleteShort(id) {
+  data.shorts = data.shorts.filter(s => s.id !== id);
+  if (shortsDetailKey && !shortGroups().find(x => x.key === shortsDetailKey)) shortsDetailKey = null;
+  saveAndSync(); renderShorts();
+}
 
 function renderAll() { updateStats(); renderTasks(); renderSchedule(); renderIdeas(); renderShorts(); renderDashboard(); }
 
