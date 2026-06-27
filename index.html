@@ -453,9 +453,15 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
       <label>タイトル</label>
       <input type="text" id="sched-edit-title" />
     </div>
-    <div class="sched-form-row">
-      <label>日付</label>
-      <input type="date" id="sched-edit-date" />
+    <div style="display:flex;gap:12px;">
+      <div class="sched-form-row" style="flex:1;">
+        <label>日付（開始）</label>
+        <input type="date" id="sched-edit-date" />
+      </div>
+      <div class="sched-form-row" style="flex:1;">
+        <label>終了日（複数日のみ・任意）</label>
+        <input type="date" id="sched-edit-enddate" />
+      </div>
     </div>
     <div style="display:flex;gap:12px;">
       <div class="sched-form-row" style="flex:1;">
@@ -624,7 +630,8 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
     <div class="section" id="tab-schedule">
       <div class="controls">
         <input type="text" id="new-sched-title" placeholder="予定を追加..." />
-        <input type="date" id="new-sched-date" />
+        <input type="date" id="new-sched-date" title="開始日" />
+        <input type="date" id="new-sched-enddate" title="終了日(複数日のみ・任意)" style="width:auto;" />
         <select id="new-sched-tag">
           <option value="stream">配信</option>
           <option value="short">ショート</option>
@@ -820,7 +827,7 @@ let data = (() => {
     }
     if (!r) return getDefaultData();
     const parsed = JSON.parse(r);
-    parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
+    parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; if (s.endDate === undefined) s.endDate = ''; });
     if (!parsed.shorts) parsed.shorts = getDefaultData().shorts;
     return parsed;
   } catch(e) { return getDefaultData(); }
@@ -888,7 +895,7 @@ async function loadFromGist() {
     const content = j.files?.[GIST_FILE]?.content;
     if (content) {
       data = JSON.parse(content);
-      data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
+      data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; if (s.endDate === undefined) s.endDate = ''; });
       if (!data.shorts) data.shorts = getDefaultData().shorts;
       saveLocal();
       renderAll();
@@ -1042,17 +1049,22 @@ function scheduleToEvent(s) {
     description: [s.sub, s.tag ? 'tag:' + s.tag : '', s.urgency ? 'urgency:' + s.urgency : ''].filter(Boolean).join('\n'),
     extendedProperties: { private: { ssId: String(s.id), ssTag: s.tag || '', ssUrgency: s.urgency || '' } },
   };
+  const multiEnd = (s.endDate && s.endDate > s.date) ? s.endDate : s.date;
   if (s.startTime) {
     ev.start = { dateTime: `${s.date}T${s.startTime}:00`, timeZone: GCAL_TZ };
-    let endDate = s.date, endTime = s.endTime;
-    if (!endTime || endTime <= s.startTime) {   // 終了未指定 or 開始以下（日跨ぎ等）→ +1時間
-      const r = gcalAddHour(s.date, s.startTime);
-      endDate = r.date; endTime = r.time;
+    let endDate = multiEnd, endTime = s.endTime;
+    if (endDate === s.date) {
+      if (!endTime || endTime <= s.startTime) {   // 終了未指定 or 開始以下（日跨ぎ等）→ +1時間
+        const r = gcalAddHour(s.date, s.startTime);
+        endDate = r.date; endTime = r.time;
+      }
+    } else if (!endTime) {                          // 複数日で終了時刻未指定は開始時刻に合わせる
+      endTime = s.startTime;
     }
     ev.end = { dateTime: `${endDate}T${endTime}:00`, timeZone: GCAL_TZ };
   } else {
     ev.start = { date: s.date };
-    ev.end = { date: gcalAddDays(s.date, 1) };
+    ev.end = { date: gcalAddDays(multiEnd, 1) };   // Googleの終日endは排他的（含む最終日+1）
   }
   const rr = gcalRecurToRRULE(s.recur);
   if (rr) ev.recurrence = rr;
@@ -1061,20 +1073,28 @@ function scheduleToEvent(s) {
 
 function eventToSchedule(ev) {
   const priv = (ev.extendedProperties && ev.extendedProperties.private) || {};
-  const s = { title: ev.summary || '(無題)', tag: priv.ssTag || 'other', urgency: priv.ssUrgency || 'mid', sub: '', recur: gcalRRULEToRecur(ev.recurrence) };
+  const s = { title: ev.summary || '(無題)', tag: priv.ssTag || 'other', urgency: priv.ssUrgency || 'mid', sub: '', recur: gcalRRULEToRecur(ev.recurrence), endDate: '' };
   if (ev.start && ev.start.dateTime) {
     s.date = ev.start.dateTime.slice(0, 10);
     s.startTime = ev.start.dateTime.slice(11, 16);
-    s.endTime = (ev.end && ev.end.dateTime) ? ev.end.dateTime.slice(11, 16) : '';
+    if (ev.end && ev.end.dateTime) {
+      s.endTime = ev.end.dateTime.slice(11, 16);
+      const endD = ev.end.dateTime.slice(0, 10);
+      if (endD > s.date) s.endDate = endD;          // 複数日にまたがる時刻指定予定
+    } else { s.endTime = ''; }
   } else {
     s.date = ev.start ? ev.start.date : today();
     s.startTime = ''; s.endTime = '';
+    if (ev.end && ev.end.date) {
+      const incl = gcalAddDays(ev.end.date, -1);     // 排他的end → 含む最終日へ
+      if (incl > s.date) s.endDate = incl;
+    }
   }
   s.sub = s.recur ? recurLabel(s.recur) : '';
   return s;
 }
 
-function schedSig(s) { return JSON.stringify([s.title, s.date, s.startTime, s.endTime, s.tag, s.urgency, s.sub, s.recur]); }
+function schedSig(s) { return JSON.stringify([s.title, s.date, s.endDate || '', s.startTime, s.endTime, s.tag, s.urgency, s.sub, s.recur]); }
 function gcalKnownMap() { try { return JSON.parse(localStorage.getItem('gcal_known') || '{}'); } catch(e) { return {}; } }
 function gcalSaveKnown(m) { try { localStorage.setItem('gcal_known', JSON.stringify(m)); } catch(e) {} }
 
@@ -1183,26 +1203,50 @@ function urgencyClass(u) { return u==='high'?'urgency-high':u==='mid'?'urgency-m
 function urgencyLabel(u) { return u==='high'?'重要':u==='mid'?'普通':'余裕あり'; }
 function recurLabel(r) { return r==='weekly'?'毎週':r==='biweekly'?'隔週':r==='monthly'?'毎月':''; }
 
+// 予定の期間日数（含む最終日まで。単日は0）
+function schedSpanDays(s) {
+  if (!s.endDate || s.endDate <= s.date) return 0;
+  const a = new Date(s.date + 'T00:00:00'), b = new Date(s.endDate + 'T00:00:00');
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+
 function expandSchedules(startStr, endStr) {
-  const start = new Date(startStr);
-  const end = new Date(endStr);
+  const winStart = new Date(startStr + 'T00:00:00');
+  const winEnd = new Date(endStr + 'T00:00:00');
   const byDate = {};
+  // 1つの予定（実体 or 繰り返し・複数日）を、表示範囲内の各日に積む
+  const addSpan = (s, occDateStr, isVirtual, parentId) => {
+    const span = schedSpanDays(s);
+    const occ = new Date(occDateStr + 'T00:00:00');
+    for (let k = 0; k <= span; k++) {
+      const d = new Date(occ.getTime() + k * 86400000);
+      if (d < winStart || d > winEnd) continue;
+      const ds = `${d.getFullYear()}-${gcalPad(d.getMonth() + 1)}-${gcalPad(d.getDate())}`;
+      if (!byDate[ds]) byDate[ds] = [];
+      if (!isVirtual && k === 0 && span === 0) {
+        byDate[ds].push(s);                        // 単日の実体はそのまま（編集対象）
+      } else {
+        const item = { ...s, date: ds };           // 継続日・繰り返し・複数日は複製（保存データは汚さない）
+        if (span > 0) { item._spanStart = occDateStr; item._spanLen = span + 1; item._spanDay = k; }
+        if (isVirtual) { item._virtual = true; item._parentId = parentId; }
+        byDate[ds].push(item);
+      }
+    }
+  };
   data.schedules.forEach(s => {
-    if (!byDate[s.date]) byDate[s.date] = [];
-    byDate[s.date].push(s);
+    addSpan(s, s.date, false, null);
     if (s.recur) {
       const base = new Date(s.date);
-      let d = new Date(base);
       for (let i = 0; i < 200; i++) {
+        let d;
         if (s.recur === 'weekly') d = new Date(base.getTime() + (i + 1) * 7 * 86400000);
         else if (s.recur === 'biweekly') d = new Date(base.getTime() + (i + 1) * 14 * 86400000);
-        else if (s.recur === 'monthly') { d = new Date(base); d.setMonth(d.getMonth() + i + 1); }
-        if (d > end) break;
-        if (d < start) continue;
-        const ds = d.toISOString().slice(0, 10);
+        else { d = new Date(base); d.setMonth(d.getMonth() + i + 1); }
+        if (d > winEnd) break;
+        const ds = `${d.getFullYear()}-${gcalPad(d.getMonth() + 1)}-${gcalPad(d.getDate())}`;
+        if (new Date(ds + 'T00:00:00') < winStart) continue;
         if (data.schedules.some(x => x.date === ds)) continue;
-        if (!byDate[ds]) byDate[ds] = [];
-        byDate[ds].push({ ...s, date: ds, _virtual: true, _parentId: s.id });
+        addSpan(s, ds, true, s.id);
       }
     }
   });
@@ -1562,7 +1606,9 @@ function renderCalendar() {
         html += `<div class="cal-event-dot tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.sub)}</div>`;
       } else {
         const timeStr = s.startTime ? `${s.startTime} ` : '';
-        html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s.startTime?' '+s.startTime+(s.endTime?'〜'+s.endTime:''):''}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${timeStr}${esc(s.title)}${recurIcon}</div>`;
+        const cont = (s._spanLen && s._spanDay > 0) ? '↪ ' : '';
+        const spanInfo = s._spanLen ? ` <span style="opacity:.55;font-size:10px;">${s._spanDay + 1}/${s._spanLen}</span>` : '';
+        html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s._spanLen?' ('+s._spanLen+'日間)':''}${s.startTime?' '+s.startTime+(s.endTime?'〜'+s.endTime:''):''}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${cont}${timeStr}${esc(s.title)}${spanInfo}${recurIcon}</div>`;
       }
     });
     html += `</div>`;
@@ -1810,6 +1856,7 @@ function openSchedModal(id, dateStr) {
     titleEl.innerHTML = '<i class="ti ti-calendar-event" style="font-size:16px;"></i> 予定を編集';
     document.getElementById('sched-edit-title').value = s.title;
     document.getElementById('sched-edit-date').value = s.date;
+    document.getElementById('sched-edit-enddate').value = s.endDate || '';
     document.getElementById('sched-edit-tag').value = s.tag || 'other';
     document.getElementById('sched-edit-start').value = s.startTime || '';
     document.getElementById('sched-edit-end').value = s.endTime || '';
@@ -1821,6 +1868,7 @@ function openSchedModal(id, dateStr) {
     titleEl.innerHTML = '<i class="ti ti-calendar-plus" style="font-size:16px;"></i> 予定を追加';
     document.getElementById('sched-edit-title').value = '';
     document.getElementById('sched-edit-date').value = dateStr || today();
+    document.getElementById('sched-edit-enddate').value = '';
     document.getElementById('sched-edit-tag').value = 'stream';
     document.getElementById('sched-edit-start').value = '';
     document.getElementById('sched-edit-end').value = '';
@@ -1847,7 +1895,9 @@ function saveSchedFromModal() {
   const urgency = document.getElementById('sched-edit-urgency').value;
   const recur = document.getElementById('sched-edit-recur').value;
   const sub = document.getElementById('sched-edit-sub').value.trim();
+  const endDateIn = document.getElementById('sched-edit-enddate').value || '';
   if (!title || !date) return;
+  const endDateVal = (endDateIn && endDateIn > date) ? endDateIn : '';
 
   const subVal = sub || (recur ? recurLabel(recur) : '');
   if (editingSchedId !== null) {
@@ -1855,6 +1905,7 @@ function saveSchedFromModal() {
     if (s) {
       s.title = title;
       s.date = date;
+      s.endDate = endDateVal;
       s.tag = tag;
       s.startTime = startTime;
       s.endTime = endTime;
@@ -1872,8 +1923,9 @@ function saveSchedFromModal() {
       existing.urgency = urgency;
       existing.recur = recur;
       existing.sub = subVal;
+      existing.endDate = endDateVal;
     } else {
-      data.schedules.push({ id: data.nextId++, title, date, tag, startTime, endTime, urgency, sub: subVal, recur });
+      data.schedules.push({ id: data.nextId++, title, date, endDate: endDateVal, tag, startTime, endTime, urgency, sub: subVal, recur });
     }
   }
   saveAndSync(); renderAll(); closeSchedModal();
@@ -2244,7 +2296,9 @@ function addSchedule() {
   const endTime = document.getElementById('new-sched-end').value || '';
   const urgency = document.getElementById('new-sched-urgency').value;
   const recur = document.getElementById('new-sched-recur').value;
+  const endDateIn = document.getElementById('new-sched-enddate').value || '';
   if (!title || !date) return;
+  const endDateVal = (endDateIn && endDateIn > date) ? endDateIn : '';
   const sub = recur ? recurLabel(recur) : '';
   const existing = data.schedules.find(s => s.date === date);
   if (existing) {
@@ -2255,13 +2309,15 @@ function addSchedule() {
     existing.urgency = urgency;
     existing.recur = recur;
     existing.sub = sub || existing.sub;
+    existing.endDate = endDateVal;
   } else {
-    data.schedules.push({ id: data.nextId++, title, date, tag, startTime, endTime, urgency, sub, recur });
+    data.schedules.push({ id: data.nextId++, title, date, endDate: endDateVal, tag, startTime, endTime, urgency, sub, recur });
   }
   document.getElementById('new-sched-title').value = '';
   document.getElementById('new-sched-start').value = '';
   document.getElementById('new-sched-end').value = '';
   document.getElementById('new-sched-recur').value = '';
+  document.getElementById('new-sched-enddate').value = '';
   saveAndSync(); renderAll();
 }
 
