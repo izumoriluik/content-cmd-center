@@ -1023,10 +1023,17 @@ function gcalRRULEToRecur(rec) {
   if (r.indexOf('FREQ=MONTHLY') > -1) return 'monthly';
   return '';
 }
+function gcalPad(n) { return String(n).padStart(2, '0'); }
 function gcalAddDays(dateStr, n) {
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = new Date(dateStr + 'T00:00:00');   // ローカル時刻として解釈
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  // UTC変換するとJSTで日付がずれるため、ローカルの年月日で組み立てる
+  return `${d.getFullYear()}-${gcalPad(d.getMonth() + 1)}-${gcalPad(d.getDate())}`;
+}
+function gcalAddHour(dateStr, timeStr) {
+  const d = new Date(`${dateStr}T${timeStr}:00`);
+  d.setHours(d.getHours() + 1);
+  return { date: `${d.getFullYear()}-${gcalPad(d.getMonth() + 1)}-${gcalPad(d.getDate())}`, time: `${gcalPad(d.getHours())}:${gcalPad(d.getMinutes())}` };
 }
 
 function scheduleToEvent(s) {
@@ -1037,13 +1044,12 @@ function scheduleToEvent(s) {
   };
   if (s.startTime) {
     ev.start = { dateTime: `${s.date}T${s.startTime}:00`, timeZone: GCAL_TZ };
-    if (s.endTime) {
-      ev.end = { dateTime: `${s.date}T${s.endTime}:00`, timeZone: GCAL_TZ };
-    } else {
-      const [h, m] = s.startTime.split(':').map(Number);
-      const eh = String((h + 1) % 24).padStart(2, '0');
-      ev.end = { dateTime: `${s.date}T${eh}:${String(m).padStart(2,'0')}:00`, timeZone: GCAL_TZ };
+    let endDate = s.date, endTime = s.endTime;
+    if (!endTime || endTime <= s.startTime) {   // 終了未指定 or 開始以下（日跨ぎ等）→ +1時間
+      const r = gcalAddHour(s.date, s.startTime);
+      endDate = r.date; endTime = r.time;
     }
+    ev.end = { dateTime: `${endDate}T${endTime}:00`, timeZone: GCAL_TZ };
   } else {
     ev.start = { date: s.date };
     ev.end = { date: gcalAddDays(s.date, 1) };
