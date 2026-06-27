@@ -13,6 +13,9 @@
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #ffffff;
@@ -377,6 +380,49 @@ button:active { transform: scale(0.98); }
 .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
 .divider { border: none; border-top: 0.5px solid var(--border); margin: 1.25rem 0; }
 input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 13px; }
+
+/* ===== Polish layer（おしゃれ化：フォント・余白・仕上げ。機能・構造は不変）===== */
+:root{
+  --radius:10px; --radius-lg:14px;
+  --gold:#cf9f52; --gold-soft:#e7c98a;
+  --font-ui:'Zen Kaku Gothic New',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-display:'Outfit','Zen Kaku Gothic New',sans-serif;
+}
+body{
+  font-family:var(--font-ui);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  letter-spacing:.01em;
+  background:radial-gradient(1100px 560px at 50% -220px, rgba(83,74,183,.18), transparent 70%), var(--bg3);
+}
+.app{ box-shadow:0 0 0 0.5px var(--border), 0 24px 60px -34px rgba(20,16,60,.45); }
+/* 見出し・数値はディスプレイ書体 */
+.app-title{ font-family:var(--font-display); font-weight:700; font-size:16px; letter-spacing:.005em; }
+.stat-value{ font-family:var(--font-display); font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:.005em; }
+.cal-title, .modal h2, .sched-modal h3, h2, h3{ font-family:var(--font-display); letter-spacing:.005em; }
+.stat-label, .search-result-type{ letter-spacing:.08em; }
+/* ロゴを実アイコン画像に */
+.logo{ background:transparent; padding:0; overflow:hidden; box-shadow:0 4px 14px -6px rgba(83,74,183,.7); }
+.logo img{ width:30px; height:30px; border-radius:8px; display:block; }
+/* タブ：アクティブを紫ティントのピルに */
+.tab{ transition:all .18s ease; }
+.tab.active{ background:var(--purple-light); color:var(--purple-dark); font-weight:700; }
+/* プライマリボタン：グラデ＋ソフトシャドウ */
+.btn-primary{ background:linear-gradient(135deg,#6157cf,#473ea0); border-color:transparent; box-shadow:0 6px 16px -8px rgba(83,74,183,.8); }
+.btn-primary:hover{ background:linear-gradient(135deg,#544ac0,#3a3392); }
+/* 統計カード：境界＋淡い影＋上辺アクセント */
+.stat-card{ position:relative; border:0.5px solid var(--border); box-shadow:0 8px 22px -18px rgba(20,16,60,.5); overflow:hidden; }
+.stat-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--purple),var(--gold-soft)); opacity:.55; }
+/* カード類：角丸を統一、ホバーを上品に */
+.task-item{ transition:border-color .15s, box-shadow .15s, transform .15s; }
+.task-item:hover{ box-shadow:0 8px 20px -16px rgba(20,16,60,.5); }
+/* 入力フォーカスをリング表示に */
+.controls input:focus, .controls select:focus, select:focus, textarea:focus, input[type=date]:focus, input[type=time]:focus{
+  border-color:var(--purple); box-shadow:0 0 0 3px var(--purple-light);
+}
+/* 余白のリズムを少し広げる */
+.header{ padding:1.1rem 1.6rem; }
+.tabs{ padding:0.7rem 1.6rem; }
+.content{ padding:1.4rem 1.6rem; }
 </style>
 </head>
 <body>
@@ -536,7 +582,7 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
 <div class="app">
   <div class="header">
     <div class="header-left">
-      <div class="logo"><i class="ti ti-layout-dashboard"></i></div>
+      <div class="logo"><img src="icon-192.png" alt="SummitSirdar" /></div>
       <div>
         <div class="app-title">SummitSirdar</div>
         <div class="app-subtitle" id="today-date"></div>
