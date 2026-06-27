@@ -306,30 +306,40 @@ button:active { transform: scale(0.98); }
 .idea-promote { font-size: 11px; color: var(--purple-dark); background: var(--purple-light); border: none; padding: 3px 10px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
 .idea-promote:hover { opacity: 0.8; }
 
-/* Shorts */
-.short-group { margin-bottom: 1.25rem; }
-.short-group-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.short-group-title .short-count { font-size: 11px; color: var(--text3); background: var(--bg2); padding: 1px 8px; border-radius: 10px; }
-.short-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 0.75rem 1rem; margin-bottom: 8px; }
-.short-card:hover { border-color: var(--border2); }
-.short-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.short-angle { font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+/* Shorts (spreadsheet) */
+.short-table-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius); }
+.short-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 760px; }
+.short-table th { background: var(--bg2); color: var(--text2); font-weight: 500; font-size: 11px; text-align: left; padding: 8px 10px; border-bottom: 0.5px solid var(--border); white-space: nowrap; position: sticky; top: 0; }
+.short-table td { padding: 6px 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+.short-table tr:hover td { background: var(--bg2); }
+.short-table tr.tech-start td { border-top: 1.5px solid var(--border2); }
+.short-num { color: var(--text3); font-size: 11px; width: 26px; text-align: right; }
+.short-tech-cell { color: var(--text2); font-size: 11px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.short-angle { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
 .angle-shock { background: var(--red-light); color: var(--red-dark); }
 .angle-howto { background: var(--blue-light); color: var(--blue-dark); }
 .angle-tips { background: var(--amber-light); color: var(--amber-dark); }
-.short-status-pill { font-size: 11px; padding: 2px 10px; border-radius: 20px; cursor: pointer; font-weight: 500; }
+.short-title-input { width: 100%; min-width: 200px; padding: 4px 6px; border: 0.5px solid transparent; border-radius: 4px; background: transparent; color: var(--text); font-size: 12px; font-family: inherit; }
+.short-title-input:hover { border-color: var(--border); }
+.short-title-input:focus { outline: none; border-color: var(--purple); background: var(--bg); }
+.short-status-pill { font-size: 10px; padding: 2px 9px; border-radius: 20px; cursor: pointer; font-weight: 500; white-space: nowrap; }
 .short-status-pill:hover { opacity: 0.8; }
 .sst-idea { background: var(--gray-light); color: var(--gray-dark); }
 .sst-film { background: var(--purple-light); color: var(--purple-dark); }
 .sst-edit { background: var(--amber-light); color: var(--amber-dark); }
 .sst-posted { background: var(--green-light); color: var(--green-dark); }
-.short-script { width: 100%; min-height: 36px; resize: vertical; padding: 7px 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg2); color: var(--text); font-size: 12px; font-family: inherit; line-height: 1.6; }
-.short-script:focus { outline: none; border-color: var(--purple); }
-.short-metrics { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
-.short-metrics label { font-size: 11px; color: var(--text2); }
-.short-metrics input { padding: 4px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit; }
-.short-views { width: 90px; }
-.short-retention { flex: 1; min-width: 120px; }
+.short-cell-input { width: 100%; padding: 4px 6px; border: 0.5px solid transparent; border-radius: 4px; background: transparent; color: var(--text); font-size: 12px; font-family: inherit; }
+.short-cell-input:hover { border-color: var(--border); }
+.short-cell-input:focus { outline: none; border-color: var(--purple); background: var(--bg); }
+.short-views-cell { width: 70px; }
+.short-ret-cell { width: 150px; }
+.short-script-btn { background: none; border: 0.5px solid var(--border); border-radius: 4px; padding: 3px 7px; font-size: 11px; color: var(--text2); cursor: pointer; white-space: nowrap; }
+.short-script-btn:hover { background: var(--bg); border-color: var(--border2); }
+.short-script-btn.has-script { color: var(--purple); border-color: var(--purple-light); }
+.short-script-row td { padding: 0 10px 10px; }
+.short-script { width: 100%; min-height: 120px; resize: vertical; padding: 8px 10px; border: 0.5px solid var(--purple); border-radius: var(--radius); background: var(--bg2); color: var(--text); font-size: 12px; font-family: inherit; line-height: 1.7; }
+.short-script:focus { outline: none; }
+.short-table .icon-btn { font-size: 13px; }
 
 /* AI */
 .ai-chat { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; max-height: 400px; overflow-y: auto; padding-right: 4px; }
@@ -668,7 +678,7 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
         <button class="btn-primary" onclick="addShort()"><i class="ti ti-plus"></i> 追加</button>
       </div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
-        ステータスをクリックで進行（企画→撮影→編集→投稿済）。投稿済にすると再生数・維持率メモが入力できます。台本欄に台本を貼り付け可。
+        状態をクリックで進行（企画→撮影→編集→投稿済）。タイトル・再生数・維持率メモは直接編集。「台本」ボタンで台本を開閉。
       </div>
       <div id="shorts-list"></div>
     </div>
@@ -748,15 +758,21 @@ function getDefaultData() {
       { id: 7, text: 'ガバナイ3銃士コラボ配信', tag: 'stream', created: today() },
     ],
     shorts: [
-      { id: 20, tech: 'Zip（壁抜け）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
-      { id: 21, tech: 'Zip（壁抜け）', angle: 'howto', status: 'idea', script: '', views: '', retention: '', posted: '' },
-      { id: 22, tech: 'Zip（壁抜け）', angle: 'tips', status: 'idea', script: '', views: '', retention: '', posted: '' },
-      { id: 23, tech: 'ZEROhop', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
-      { id: 24, tech: 'Janitor Grab Bait（管理人を餌に）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
-      { id: 25, tech: 'Checkpoint Abuse（疑似テレポ）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
-      { id: 26, tech: 'Bed Skip（部屋まるごと）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 20, tech: 'Light Skip Zip（メデューサの目回避）', angle: 'shock', title: '【衝撃】死亡ギミックを“発動前”に消し飛ばす技', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 21, tech: 'Light Skip Zip（メデューサの目回避）', angle: 'howto', title: 'メデューサの目スキップのやり方｜セットアップ3パターン', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 22, tech: 'Light Skip Zip（メデューサの目回避）', angle: 'tips', title: 'Zipが決まらない人へ｜掴み→スライドの“タタンッ”', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 23, tech: 'Janitor Grab Bait（管理人を餌に）', angle: 'shock', title: '【ゾッと】管理人にワザと掴まれると17秒速くなる', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 24, tech: 'Janitor Grab Bait（管理人を餌に）', angle: 'howto', title: '管理人グラブベイトのやり方｜立ち位置と柱抜き', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 25, tech: 'ZEROhop（スタミナ0が最速）', angle: 'shock', title: '【逆説】スタミナ0の方が“速い”バグ技', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 26, tech: 'ZEROhop（スタミナ0が最速）', angle: 'howto', title: '普通の移動 vs ゼロホップ｜全編で30秒差', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 27, tech: 'ZEROhop（スタミナ0が最速）', angle: 'tips', title: 'ゼロホップの跳び方｜連続ジャンプを繋ぐコツ', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 28, tech: 'Bed Skip（鍵スキップ）', angle: 'shock', title: '【星1なのに】鍵の部屋を22秒ショートカット', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 29, tech: 'Bed Skip（鍵スキップ）', angle: 'howto', title: 'ベッドスキップのやり方｜飛び移りルート', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 30, tech: 'Bed Skip（鍵スキップ）', angle: 'tips', title: '鍵が扉前に転がる“下入力オフ”のコツ', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 31, tech: 'Monkey Skip（シーソー床）', angle: 'shock', title: '【物理バグ】サルを踏み台に床を傾けて進む', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 32, tech: 'Monkey Skip（シーソー床）', angle: 'tips', title: 'モンキースキップはPCのみ？コンソール不可の理由', status: 'idea', script: '', views: '', retention: '', posted: '' },
     ],
-    nextId: 30
+    nextId: 40
   };
 }
 
@@ -1754,43 +1770,52 @@ function angleLabel(a) { return a==='shock'?'衝撃版':a==='howto'?'解説版':
 function shortStatusClass(s) { return s==='posted'?'sst-posted':s==='edit'?'sst-edit':s==='film'?'sst-film':'sst-idea'; }
 function shortStatusLabel(s) { return s==='posted'?'投稿済':s==='edit'?'編集':s==='film'?'撮影':'企画'; }
 
+let openScriptId = null;
+
 function renderShorts() {
   const el = document.getElementById('shorts-list');
   if (!data.shorts || !data.shorts.length) { el.innerHTML = '<div class="empty-state">ショートがありません</div>'; return; }
-  const groups = {};
-  data.shorts.forEach(s => { if (!groups[s.tech]) groups[s.tech] = []; groups[s.tech].push(s); });
-  let html = '';
-  Object.keys(groups).forEach(tech => {
-    const items = groups[tech];
-    const posted = items.filter(s => s.status === 'posted').length;
-    html += `<div class="short-group">
-      <div class="short-group-title"><i class="ti ti-bolt" style="font-size:14px;color:var(--purple);"></i> ${esc(tech)} <span class="short-count">${items.length}本 / 投稿${posted}</span></div>`;
-    items.forEach(s => {
-      html += `<div class="short-card">
-        <div class="short-card-top">
-          <span class="short-angle ${angleClass(s.angle)}">${angleLabel(s.angle)}</span>
-          <span class="short-status-pill ${shortStatusClass(s.status)}" onclick="cycleShortStatus(${s.id})" title="クリックで進行">${shortStatusLabel(s.status)}</span>
-          <div style="flex:1;"></div>
-          <button class="icon-btn" onclick="deleteShort(${s.id})" title="削除"><i class="ti ti-trash"></i></button>
-        </div>
-        <textarea class="short-script" placeholder="台本をここに貼り付け..." onchange="updateShortField(${s.id},'script',this.value)">${esc(s.script||'')}</textarea>
-        ${s.status==='posted'?`<div class="short-metrics">
-          <label>再生数</label>
-          <input class="short-views" type="text" value="${esc(s.views||'')}" placeholder="例:1.2万" onchange="updateShortField(${s.id},'views',this.value)" />
-          <input class="short-retention" type="text" value="${esc(s.retention||'')}" placeholder="維持率メモ（例:3秒で30%落ち）" onchange="updateShortField(${s.id},'retention',this.value)" />
-        </div>`:''}
-      </div>`;
-    });
-    html += `</div>`;
+  let rows = '';
+  let prevTech = null;
+  data.shorts.forEach((s, idx) => {
+    const techStart = s.tech !== prevTech;
+    prevTech = s.tech;
+    const hasScript = (s.script || '').trim().length > 0;
+    rows += `<tr class="${techStart?'tech-start':''}">
+      <td class="short-num">${idx+1}</td>
+      <td class="short-tech-cell" title="${esc(s.tech)}">${techStart?esc(s.tech):''}</td>
+      <td><span class="short-angle ${angleClass(s.angle)}">${angleLabel(s.angle)}</span></td>
+      <td><input class="short-title-input" type="text" value="${esc(s.title||'')}" placeholder="タイトル..." onchange="updateShortField(${s.id},'title',this.value)" /></td>
+      <td><span class="short-status-pill ${shortStatusClass(s.status)}" onclick="cycleShortStatus(${s.id})" title="クリックで進行">${shortStatusLabel(s.status)}</span></td>
+      <td><input class="short-cell-input short-views-cell" type="text" value="${esc(s.views||'')}" placeholder="再生数" onchange="updateShortField(${s.id},'views',this.value)" /></td>
+      <td><input class="short-cell-input short-ret-cell" type="text" value="${esc(s.retention||'')}" placeholder="維持率メモ" onchange="updateShortField(${s.id},'retention',this.value)" /></td>
+      <td><button class="short-script-btn ${hasScript?'has-script':''}" onclick="toggleScript(${s.id})"><i class="ti ti-file-text" style="font-size:12px;"></i> 台本</button></td>
+      <td><button class="icon-btn" onclick="deleteShort(${s.id})" title="削除"><i class="ti ti-trash"></i></button></td>
+    </tr>`;
+    if (openScriptId === s.id) {
+      rows += `<tr class="short-script-row"><td colspan="9">
+        <textarea class="short-script" placeholder="台本をここに貼り付け / 編集..." onchange="updateShortField(${s.id},'script',this.value)">${esc(s.script||'')}</textarea>
+      </td></tr>`;
+    }
   });
-  el.innerHTML = html;
+  el.innerHTML = `<div class="short-table-wrap"><table class="short-table">
+    <thead><tr>
+      <th></th><th>技</th><th>切り口</th><th>タイトル</th><th>状態</th><th>再生数</th><th>維持率メモ</th><th>台本</th><th></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function toggleScript(id) {
+  openScriptId = (openScriptId === id) ? null : id;
+  renderShorts();
 }
 
 function addShort() {
   const tech = document.getElementById('new-short-tech').value.trim();
   const angle = document.getElementById('new-short-angle').value;
   if (!tech) return;
-  data.shorts.push({ id: data.nextId++, tech, angle, status: 'idea', script: '', views: '', retention: '', posted: '' });
+  data.shorts.push({ id: data.nextId++, tech, angle, title: '', status: 'idea', script: '', views: '', retention: '', posted: '' });
   document.getElementById('new-short-tech').value = '';
   saveAndSync(); renderShorts();
 }
