@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
   --bg: #ffffff;
@@ -736,6 +737,21 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
         <div id="gist-id-display" style="font-size:12px;color:var(--text3);margin-bottom:1rem;"></div>
         <button onclick="disconnectGist()" style="font-size:12px;color:var(--text2);border-color:var(--border);">連携を解除</button>
         <hr class="divider">
+        <div style="font-size:14px;font-weight:500;margin-bottom:0.75rem;">Googleカレンダー連携（双方向）</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:0.75rem;line-height:1.6;">
+          Google Cloudで「ウェブアプリケーション」のOAuthクライアントを作成し、承認済みJavaScript生成元にこのサイトのURLを登録 → クライアントIDを貼って接続。スケジュールとGoogleカレンダーが双方向で同期されます。
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:0.5rem;">
+          <input type="text" id="gcal-client-id" placeholder="xxxxx.apps.googleusercontent.com" style="flex:1;padding:7px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:12px;font-family:monospace;" />
+          <button onclick="gcalConnect()"><i class="ti ti-plug"></i> 接続</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;">
+          <button onclick="gcalPull()" style="font-size:12px;"><i class="ti ti-download"></i> Googleから取り込み</button>
+          <button onclick="gcalReconcile()" style="font-size:12px;"><i class="ti ti-upload"></i> Googleへ送信</button>
+          <button onclick="gcalDisconnect()" style="font-size:12px;color:var(--text2);border-color:var(--border);">解除</button>
+        </div>
+        <div id="gcal-status" style="font-size:12px;color:var(--text3);margin-bottom:1rem;">未接続</div>
+        <hr class="divider">
         <div style="font-size:14px;font-weight:500;margin-bottom:0.75rem;">データ操作</div>
         <div style="display:flex;gap:8px;">
           <button onclick="exportJSON()"><i class="ti ti-download"></i> JSONエクスポート</button>
@@ -812,6 +828,14 @@ let data = (() => {
 let ghToken = localStorage.getItem('gh_token') || '';
 let gistId = localStorage.getItem('gist_id') || '';
 let claudeKey = localStorage.getItem('claude_key') || '';
+// Googleカレンダー連携の状態
+let gcalClientId = localStorage.getItem('gcal_client_id') || '';
+let gcalCalendarId = localStorage.getItem('gcal_calendar_id') || 'primary';
+let gcalToken = '';            // アクセストークン（メモリのみ・localStorageには保存しない）
+let gcalTokenClient = null;
+let gcalReconcileTimer = null;
+const GCAL_TZ = 'Asia/Tokyo';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 let taskView = 'list';
 let schedView = 'calendar';
 let calYear, calMonth;
@@ -884,7 +908,7 @@ async function manualSync() {
   if (!loaded) await syncToGist();
 }
 
-function saveAndSync() { saveLocal(); if (ghToken) syncToGist(); }
+function saveAndSync() { saveLocal(); if (ghToken) syncToGist(); gcalScheduleReconcile(); }
 
 function saveToken() {
   const t = document.getElementById('token-input').value.trim();
@@ -925,6 +949,222 @@ function saveClaudeKey() {
   claudeKey = k;
   localStorage.setItem('claude_key', k);
   alert('Claude APIキーを保存しました');
+}
+
+/* ===== Googleカレンダー連携（Google Identity Services / Calendar API v3）=====
+   双方向同期。接続数を抑えるため: 差分取り込み(syncToken)・編集はデバウンスでまとめ送信。
+   ※ OAuthクライアントIDは公開可（SPA用・client secretは持たない）。トークンはメモリのみ保持。 */
+function gcalConnected() { return !!gcalToken; }
+
+function gcalSetStatus(txt, cls) {
+  const el = document.getElementById('gcal-status');
+  if (el) { el.textContent = txt; el.style.color = cls === 'ok' ? 'var(--green-dark,#2e8b57)' : cls === 'err' ? 'var(--red-dark,#c0392b)' : 'var(--text3)'; }
+}
+
+function gcalInitClient() {
+  if (!gcalClientId) return false;
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return false;
+  gcalTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: gcalClientId,
+    scope: GCAL_SCOPE,
+    callback: (resp) => {
+      if (resp && resp.access_token) {
+        gcalToken = resp.access_token;
+        gcalSetStatus('接続済み', 'ok');
+        gcalAfterConnect();
+      } else { gcalSetStatus('認証失敗', 'err'); }
+    },
+  });
+  return true;
+}
+
+function gcalConnect() {
+  const inp = document.getElementById('gcal-client-id');
+  if (inp && inp.value.trim() && inp.value.indexOf('（') === -1) {
+    gcalClientId = inp.value.trim();
+    localStorage.setItem('gcal_client_id', gcalClientId);
+    gcalTokenClient = null;
+  }
+  if (!gcalClientId) { alert('OAuthクライアントIDを入力してください'); return; }
+  if (!gcalTokenClient && !gcalInitClient()) { alert('Google認証ライブラリの読み込み待ちです。数秒後に再度お試しください。'); return; }
+  gcalSetStatus('認証中...', '');
+  gcalTokenClient.requestAccessToken({ prompt: gcalToken ? '' : 'consent' });
+}
+
+function gcalDisconnect() {
+  try { if (gcalToken && typeof google !== 'undefined' && google.accounts) google.accounts.oauth2.revoke(gcalToken, () => {}); } catch(e) {}
+  gcalToken = '';
+  gcalSetStatus('未接続', '');
+}
+
+async function gcalApi(method, path, body, params) {
+  let url = 'https://www.googleapis.com/calendar/v3' + path;
+  if (params) url += '?' + new URLSearchParams(params).toString();
+  const opt = { method, headers: { 'Authorization': 'Bearer ' + gcalToken } };
+  if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  const res = await fetch(url, opt);
+  if (res.status === 401) { gcalToken = ''; gcalSetStatus('再認証が必要', 'err'); throw new Error('HTTP 401'); }
+  if (!res.ok) { const t = await res.text(); throw new Error('HTTP ' + res.status + ' ' + t); }
+  if (method === 'DELETE') return {};
+  return res.json();
+}
+
+function gcalRecurToRRULE(r) {
+  if (r === 'weekly') return ['RRULE:FREQ=WEEKLY'];
+  if (r === 'biweekly') return ['RRULE:FREQ=WEEKLY;INTERVAL=2'];
+  if (r === 'monthly') return ['RRULE:FREQ=MONTHLY'];
+  return undefined;
+}
+function gcalRRULEToRecur(rec) {
+  if (!rec || !rec.length) return '';
+  const r = rec.find(x => x.indexOf('RRULE') === 0) || '';
+  if (r.indexOf('FREQ=WEEKLY') > -1 && r.indexOf('INTERVAL=2') > -1) return 'biweekly';
+  if (r.indexOf('FREQ=WEEKLY') > -1) return 'weekly';
+  if (r.indexOf('FREQ=MONTHLY') > -1) return 'monthly';
+  return '';
+}
+function gcalAddDays(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function scheduleToEvent(s) {
+  const ev = {
+    summary: s.title || '(無題)',
+    description: [s.sub, s.tag ? 'tag:' + s.tag : '', s.urgency ? 'urgency:' + s.urgency : ''].filter(Boolean).join('\n'),
+    extendedProperties: { private: { ssId: String(s.id), ssTag: s.tag || '', ssUrgency: s.urgency || '' } },
+  };
+  if (s.startTime) {
+    ev.start = { dateTime: `${s.date}T${s.startTime}:00`, timeZone: GCAL_TZ };
+    if (s.endTime) {
+      ev.end = { dateTime: `${s.date}T${s.endTime}:00`, timeZone: GCAL_TZ };
+    } else {
+      const [h, m] = s.startTime.split(':').map(Number);
+      const eh = String((h + 1) % 24).padStart(2, '0');
+      ev.end = { dateTime: `${s.date}T${eh}:${String(m).padStart(2,'0')}:00`, timeZone: GCAL_TZ };
+    }
+  } else {
+    ev.start = { date: s.date };
+    ev.end = { date: gcalAddDays(s.date, 1) };
+  }
+  const rr = gcalRecurToRRULE(s.recur);
+  if (rr) ev.recurrence = rr;
+  return ev;
+}
+
+function eventToSchedule(ev) {
+  const priv = (ev.extendedProperties && ev.extendedProperties.private) || {};
+  const s = { title: ev.summary || '(無題)', tag: priv.ssTag || 'other', urgency: priv.ssUrgency || 'mid', sub: '', recur: gcalRRULEToRecur(ev.recurrence) };
+  if (ev.start && ev.start.dateTime) {
+    s.date = ev.start.dateTime.slice(0, 10);
+    s.startTime = ev.start.dateTime.slice(11, 16);
+    s.endTime = (ev.end && ev.end.dateTime) ? ev.end.dateTime.slice(11, 16) : '';
+  } else {
+    s.date = ev.start ? ev.start.date : today();
+    s.startTime = ''; s.endTime = '';
+  }
+  s.sub = s.recur ? recurLabel(s.recur) : '';
+  return s;
+}
+
+function schedSig(s) { return JSON.stringify([s.title, s.date, s.startTime, s.endTime, s.tag, s.urgency, s.sub, s.recur]); }
+function gcalKnownMap() { try { return JSON.parse(localStorage.getItem('gcal_known') || '{}'); } catch(e) { return {}; } }
+function gcalSaveKnown(m) { try { localStorage.setItem('gcal_known', JSON.stringify(m)); } catch(e) {} }
+
+// SS → Google（追加/更新/削除をまとめて反映）
+async function gcalReconcile() {
+  if (!gcalConnected()) return;
+  gcalSetStatus('カレンダー同期中...', '');
+  const cal = encodeURIComponent(gcalCalendarId);
+  const known = gcalKnownMap();   // ssId -> { gcalId, sig }
+  const seen = {};
+  try {
+    for (const s of data.schedules) {
+      const id = String(s.id);
+      const sig = schedSig(s);
+      seen[id] = true;
+      const ev = scheduleToEvent(s);
+      if (s.gcalId) {
+        if (!known[id] || known[id].sig !== sig) {
+          await gcalApi('PATCH', `/calendars/${cal}/events/${s.gcalId}`, ev);
+        }
+        known[id] = { gcalId: s.gcalId, sig };
+      } else {
+        const created = await gcalApi('POST', `/calendars/${cal}/events`, ev);
+        s.gcalId = created.id;
+        known[id] = { gcalId: created.id, sig };
+      }
+    }
+    for (const id of Object.keys(known)) {
+      if (!seen[id]) {
+        try { await gcalApi('DELETE', `/calendars/${cal}/events/${known[id].gcalId}`); } catch(e) {}
+        delete known[id];
+      }
+    }
+    gcalSaveKnown(known);
+    saveLocal();
+    gcalSetStatus('接続済み', 'ok');
+  } catch(e) { console.error(e); gcalSetStatus('同期エラー（コンソール参照）', 'err'); }
+}
+
+function gcalScheduleReconcile() {
+  if (!gcalConnected()) return;
+  clearTimeout(gcalReconcileTimer);
+  gcalReconcileTimer = setTimeout(gcalReconcile, 2500);   // 編集が落ち着いてからまとめ送信
+}
+
+// Google → SS（差分取り込み: syncTokenで変更分のみ）
+async function gcalPull() {
+  if (!gcalConnected()) return;
+  gcalSetStatus('取り込み中...', '');
+  const cal = encodeURIComponent(gcalCalendarId);
+  let syncToken = localStorage.getItem('gcal_sync_token') || '';
+  let pageToken = '';
+  let changed = false;
+  try {
+    while (true) {
+      const params = { singleEvents: 'false', showDeleted: 'true', maxResults: '250' };
+      if (syncToken) params.syncToken = syncToken;
+      else params.timeMin = new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString(); // 初回は過去60日以降
+      if (pageToken) params.pageToken = pageToken;
+      let j;
+      try {
+        j = await gcalApi('GET', `/calendars/${cal}/events`, null, params);
+      } catch(e) {
+        if (String(e.message).indexOf('HTTP 410') === 0) { localStorage.removeItem('gcal_sync_token'); syncToken = ''; pageToken = ''; continue; }
+        throw e;
+      }
+      for (const ev of (j.items || [])) {
+        const match = data.schedules.find(s => s.gcalId === ev.id);
+        if (ev.status === 'cancelled') {
+          if (match) { data.schedules = data.schedules.filter(s => s !== match); changed = true; }
+          continue;
+        }
+        if (!ev.start) continue;
+        const mapped = eventToSchedule(ev);
+        if (match) { Object.assign(match, mapped); changed = true; }
+        else {
+          const priv = (ev.extendedProperties && ev.extendedProperties.private) || {};
+          const byId = priv.ssId ? data.schedules.find(s => String(s.id) === String(priv.ssId)) : null;
+          if (byId) { byId.gcalId = ev.id; Object.assign(byId, mapped); changed = true; }
+          else { data.schedules.push(Object.assign({ id: data.nextId++, gcalId: ev.id }, mapped)); changed = true; }
+        }
+      }
+      if (j.nextPageToken) { pageToken = j.nextPageToken; continue; }
+      if (j.nextSyncToken) localStorage.setItem('gcal_sync_token', j.nextSyncToken);
+      break;
+    }
+    if (changed) { saveLocal(); if (ghToken) syncToGist(); renderAll(); }
+    gcalSetStatus('接続済み', 'ok');
+  } catch(e) { console.error(e); gcalSetStatus('取り込みエラー（コンソール参照）', 'err'); }
+}
+
+async function gcalAfterConnect() {
+  const inp = document.getElementById('gcal-client-id');
+  if (inp) inp.value = '（接続済み）';
+  await gcalPull();        // まずGoogle側の変更を取り込み
+  await gcalReconcile();   // 次にSS側を反映
 }
 
 // Helpers
@@ -2127,6 +2367,11 @@ renderAIChat();
 document.getElementById('today-date').textContent = new Date().toLocaleDateString('ja-JP');
 document.getElementById('new-sched-date').value = today();
 if (document.getElementById('settings-token')) document.getElementById('settings-token').value = ghToken ? '（設定済み）' : '';
+if (gcalClientId) {
+  const gcEl = document.getElementById('gcal-client-id');
+  if (gcEl) gcEl.value = gcalClientId;
+  gcalSetStatus('未接続（クライアントID設定済み・接続を押してください）', '');
+}
 updateGistDisplay();
 
 if (ghToken && gistId) {
