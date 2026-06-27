@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>コンテンツ司令塔</title>
+<title>SummitSirdar</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#534AB7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="司令塔">
+<meta name="apple-mobile-web-app-title" content="Sirdar">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
@@ -531,7 +531,7 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
     <div class="header-left">
       <div class="logo"><i class="ti ti-layout-dashboard"></i></div>
       <div>
-        <div class="app-title">コンテンツ司令塔</div>
+        <div class="app-title">SummitSirdar</div>
         <div class="app-subtitle" id="today-date"></div>
       </div>
     </div>
@@ -748,7 +748,10 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
 </div>
 
 <script>
-const LOCAL_KEY = 'content-cmd-v2';
+const LOCAL_KEY = 'summitsirdar-v1';
+const LEGACY_KEYS = ['content-cmd-v2']; // 旧名称のlocalStorageキー（移行用）
+// Gist内部ファイル名。本番データが入っているため値は据え置き（非表示の内部名）
+const GIST_FILE = 'content-cmd.json';
 
 function getDefaultData() {
   return {
@@ -791,7 +794,14 @@ function today() { return new Date().toISOString().slice(0,10); }
 
 let data = (() => {
   try {
-    const r = localStorage.getItem(LOCAL_KEY);
+    let r = localStorage.getItem(LOCAL_KEY);
+    // 旧名称（コンテンツ司令塔）のデータを引き継ぐ
+    if (!r) {
+      for (const k of LEGACY_KEYS) {
+        const legacy = localStorage.getItem(k);
+        if (legacy) { r = legacy; localStorage.setItem(LOCAL_KEY, legacy); break; }
+      }
+    }
     if (!r) return getDefaultData();
     const parsed = JSON.parse(r);
     parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
@@ -827,11 +837,11 @@ async function syncToGist() {
     if (gistId) {
       url = `https://api.github.com/gists/${gistId}`;
       method = 'PATCH';
-      body = JSON.stringify({ files: { 'content-cmd.json': { content } } });
+      body = JSON.stringify({ files: { [GIST_FILE]: { content } } });
     } else {
       url = 'https://api.github.com/gists';
       method = 'POST';
-      body = JSON.stringify({ description: 'コンテンツ司令塔データ', public: false, files: { 'content-cmd.json': { content } } });
+      body = JSON.stringify({ description: 'SummitSirdar データ', public: false, files: { [GIST_FILE]: { content } } });
     }
     const res = await fetch(url, { method, headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' }, body });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -851,7 +861,7 @@ async function loadFromGist() {
     const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: { 'Authorization': `token ${ghToken}` } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const j = await res.json();
-    const content = j.files?.['content-cmd.json']?.content;
+    const content = j.files?.[GIST_FILE]?.content;
     if (content) {
       data = JSON.parse(content);
       data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
@@ -2104,7 +2114,7 @@ function quickAsk(q) { switchTab('ai'); document.getElementById('ai-question').v
 
 function exportJSON() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'content-cmd-backup.json'; a.click();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'summitsirdar-backup.json'; a.click();
 }
 
 function clearAllData() {

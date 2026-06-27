@@ -1,7 +1,12 @@
-# コンテンツ司令塔 — 引き継ぎ / 統括ドキュメント
+# SummitSirdar — 引き継ぎ / 統括ドキュメント
 
-VTuber **ルイク**さん（Little Nightmares 1・2 RTA 日本記録保持者）の個人コンテンツ管理ツール。
+VTuber **ルイク**さん（Little Nightmares 1・2 RTA 日本記録保持者）の個人コンテンツ制作マネジメント／スケジュール管理ツール「**SummitSirdar**」（旧称「コンテンツ司令塔」）。
 このファイルはプロジェクト全体の統括用。新しく作業を引き継ぐ人（含むAI）はまずこれを読む。
+
+> **命名メモ**: ルイクさんのツールは2本立て。
+> - **SummitSirdar**（本リポジトリ／Mac作成・Win対応）= コンテンツ制作全般のマネジメントとスケジューリングの司令塔。
+> - **PeakLeader**（別リポジトリ `luik-stream-bot`／Win）= 配信前後の作業や切り抜きポイント・タイムスタンプの自動抽出など、配信サポートの自動化。
+> ※ リポジトリ名・公開URL・Gist内部ファイル名・slug類は旧名（content-cmd-center / content-cmd.json）のまま据え置き（デプロイ・同期・既存データ保護のため）。表示名・ブランディングのみ SummitSirdar に統一済み。
 
 ---
 
@@ -32,7 +37,7 @@ git add -A && git commit -m "..." && git push
 ## 3. 技術構成 / データモデル
 
 - 外部依存: Tabler Icons CDN のみ。フレームワーク無し。
-- `data = { tasks, schedules, ideas, shorts, nextId }` を localStorage(`content-cmd-v2`) と Gist に保存。
+- `data = { tasks, schedules, ideas, shorts, nextId }` を localStorage(`summitsirdar-v1`、旧 `content-cmd-v2` から自動移行) と Gist に保存。
 - 各エンティティの主なフィールド:
   - task: `id,title,tag,status(todo/wip/done),created,due,recur(weekly/biweekly/monthly)`
   - schedule: `id,title,date,tag,startTime,endTime,urgency(high/mid/low),sub,recur`

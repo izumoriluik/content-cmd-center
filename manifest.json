@@ -1,7 +1,7 @@
 {
-  "name": "コンテンツ司令塔",
-  "short_name": "司令塔",
-  "description": "VTuber向けコンテンツ管理ツール",
+  "name": "SummitSirdar",
+  "short_name": "Sirdar",
+  "description": "VTuber向けコンテンツ制作マネジメント／スケジュール管理ツール",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#1c1c1a",
