@@ -1309,7 +1309,8 @@ function expandSchedules(startStr, endStr) {
         if (d > winEnd) break;
         const ds = `${d.getFullYear()}-${gcalPad(d.getMonth() + 1)}-${gcalPad(d.getDate())}`;
         if (new Date(ds + 'T00:00:00') < winStart) continue;
-        if (data.schedules.some(x => x.date === ds)) continue;
+        // 同じ予定（同タイトル）の実体がその日にある時だけスキップ（手動上書き対応）。無関係な予定では隠さない
+        if (data.schedules.some(x => x.date === ds && x.title === s.title)) continue;
         addSpan(s, ds, true, s.id);
       }
     }
