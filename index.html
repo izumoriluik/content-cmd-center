@@ -306,6 +306,31 @@ button:active { transform: scale(0.98); }
 .idea-promote { font-size: 11px; color: var(--purple-dark); background: var(--purple-light); border: none; padding: 3px 10px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
 .idea-promote:hover { opacity: 0.8; }
 
+/* Shorts */
+.short-group { margin-bottom: 1.25rem; }
+.short-group-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.short-group-title .short-count { font-size: 11px; color: var(--text3); background: var(--bg2); padding: 1px 8px; border-radius: 10px; }
+.short-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 0.75rem 1rem; margin-bottom: 8px; }
+.short-card:hover { border-color: var(--border2); }
+.short-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.short-angle { font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+.angle-shock { background: var(--red-light); color: var(--red-dark); }
+.angle-howto { background: var(--blue-light); color: var(--blue-dark); }
+.angle-tips { background: var(--amber-light); color: var(--amber-dark); }
+.short-status-pill { font-size: 11px; padding: 2px 10px; border-radius: 20px; cursor: pointer; font-weight: 500; }
+.short-status-pill:hover { opacity: 0.8; }
+.sst-idea { background: var(--gray-light); color: var(--gray-dark); }
+.sst-film { background: var(--purple-light); color: var(--purple-dark); }
+.sst-edit { background: var(--amber-light); color: var(--amber-dark); }
+.sst-posted { background: var(--green-light); color: var(--green-dark); }
+.short-script { width: 100%; min-height: 36px; resize: vertical; padding: 7px 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg2); color: var(--text); font-size: 12px; font-family: inherit; line-height: 1.6; }
+.short-script:focus { outline: none; border-color: var(--purple); }
+.short-metrics { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+.short-metrics label { font-size: 11px; color: var(--text2); }
+.short-metrics input { padding: 4px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit; }
+.short-views { width: 90px; }
+.short-retention { flex: 1; min-width: 120px; }
+
 /* AI */
 .ai-chat { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; max-height: 400px; overflow-y: auto; padding-right: 4px; }
 .ai-msg { padding: 8px 12px; border-radius: var(--radius); font-size: 13px; line-height: 1.7; white-space: pre-wrap; max-width: 85%; }
@@ -511,6 +536,7 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
     <button class="tab" onclick="switchTab('tasks')"><i class="ti ti-checklist"></i> タスク</button>
     <button class="tab" onclick="switchTab('schedule')"><i class="ti ti-calendar"></i> スケジュール</button>
     <button class="tab" onclick="switchTab('ideas')"><i class="ti ti-bulb"></i> アイデア</button>
+    <button class="tab" onclick="switchTab('shorts')"><i class="ti ti-device-tv"></i> ショート</button>
     <button class="tab" onclick="switchTab('ai')"><i class="ti ti-sparkles"></i> AI相談</button>
     <button class="tab" onclick="switchTab('settings')"><i class="ti ti-settings"></i> 設定</button>
   </div>
@@ -630,6 +656,23 @@ input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border2); border
       <div class="idea-grid" id="idea-grid"></div>
     </div>
 
+    <!-- SHORTS -->
+    <div class="section" id="tab-shorts">
+      <div class="controls">
+        <input type="text" id="new-short-tech" placeholder="技名（例：Zip 壁抜け）..." onkeydown="if(event.key==='Enter')addShort()" />
+        <select id="new-short-angle">
+          <option value="shock">衝撃版</option>
+          <option value="howto">解説版</option>
+          <option value="tips">コツ/失敗版</option>
+        </select>
+        <button class="btn-primary" onclick="addShort()"><i class="ti ti-plus"></i> 追加</button>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
+        ステータスをクリックで進行（企画→撮影→編集→投稿済）。投稿済にすると再生数・維持率メモが入力できます。台本欄に台本を貼り付け可。
+      </div>
+      <div id="shorts-list"></div>
+    </div>
+
     <!-- AI -->
     <div class="section" id="tab-ai">
       <div class="ai-panel">
@@ -704,7 +747,16 @@ function getDefaultData() {
       { id: 6, text: 'LN1 RTA世界記録との比較動画', tag: 'short', created: today() },
       { id: 7, text: 'ガバナイ3銃士コラボ配信', tag: 'stream', created: today() },
     ],
-    nextId: 10
+    shorts: [
+      { id: 20, tech: 'Zip（壁抜け）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 21, tech: 'Zip（壁抜け）', angle: 'howto', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 22, tech: 'Zip（壁抜け）', angle: 'tips', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 23, tech: 'ZEROhop', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 24, tech: 'Janitor Grab Bait（管理人を餌に）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 25, tech: 'Checkpoint Abuse（疑似テレポ）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
+      { id: 26, tech: 'Bed Skip（部屋まるごと）', angle: 'shock', status: 'idea', script: '', views: '', retention: '', posted: '' },
+    ],
+    nextId: 30
   };
 }
 
@@ -716,6 +768,7 @@ let data = (() => {
     if (!r) return getDefaultData();
     const parsed = JSON.parse(r);
     parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
+    if (!parsed.shorts) parsed.shorts = getDefaultData().shorts;
     return parsed;
   } catch(e) { return getDefaultData(); }
 })();
@@ -775,6 +828,7 @@ async function loadFromGist() {
     if (content) {
       data = JSON.parse(content);
       data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; });
+      if (!data.shorts) data.shorts = getDefaultData().shorts;
       saveLocal();
       renderAll();
       setSyncStatus('ok', '同期済み');
@@ -1694,7 +1748,71 @@ function renderDashboard() {
   document.getElementById('dashboard-schedule').innerHTML = upSlice.length ? upSlice.map(s=>scheduleHTML(s,true)).join('') : '<div class="empty-state">予定なし</div>';
 }
 
-function renderAll() { updateStats(); renderTasks(); renderSchedule(); renderIdeas(); renderDashboard(); }
+// ─── Shorts ───
+function angleClass(a) { return a==='shock'?'angle-shock':a==='howto'?'angle-howto':'angle-tips'; }
+function angleLabel(a) { return a==='shock'?'衝撃版':a==='howto'?'解説版':'コツ/失敗版'; }
+function shortStatusClass(s) { return s==='posted'?'sst-posted':s==='edit'?'sst-edit':s==='film'?'sst-film':'sst-idea'; }
+function shortStatusLabel(s) { return s==='posted'?'投稿済':s==='edit'?'編集':s==='film'?'撮影':'企画'; }
+
+function renderShorts() {
+  const el = document.getElementById('shorts-list');
+  if (!data.shorts || !data.shorts.length) { el.innerHTML = '<div class="empty-state">ショートがありません</div>'; return; }
+  const groups = {};
+  data.shorts.forEach(s => { if (!groups[s.tech]) groups[s.tech] = []; groups[s.tech].push(s); });
+  let html = '';
+  Object.keys(groups).forEach(tech => {
+    const items = groups[tech];
+    const posted = items.filter(s => s.status === 'posted').length;
+    html += `<div class="short-group">
+      <div class="short-group-title"><i class="ti ti-bolt" style="font-size:14px;color:var(--purple);"></i> ${esc(tech)} <span class="short-count">${items.length}本 / 投稿${posted}</span></div>`;
+    items.forEach(s => {
+      html += `<div class="short-card">
+        <div class="short-card-top">
+          <span class="short-angle ${angleClass(s.angle)}">${angleLabel(s.angle)}</span>
+          <span class="short-status-pill ${shortStatusClass(s.status)}" onclick="cycleShortStatus(${s.id})" title="クリックで進行">${shortStatusLabel(s.status)}</span>
+          <div style="flex:1;"></div>
+          <button class="icon-btn" onclick="deleteShort(${s.id})" title="削除"><i class="ti ti-trash"></i></button>
+        </div>
+        <textarea class="short-script" placeholder="台本をここに貼り付け..." onchange="updateShortField(${s.id},'script',this.value)">${esc(s.script||'')}</textarea>
+        ${s.status==='posted'?`<div class="short-metrics">
+          <label>再生数</label>
+          <input class="short-views" type="text" value="${esc(s.views||'')}" placeholder="例:1.2万" onchange="updateShortField(${s.id},'views',this.value)" />
+          <input class="short-retention" type="text" value="${esc(s.retention||'')}" placeholder="維持率メモ（例:3秒で30%落ち）" onchange="updateShortField(${s.id},'retention',this.value)" />
+        </div>`:''}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  el.innerHTML = html;
+}
+
+function addShort() {
+  const tech = document.getElementById('new-short-tech').value.trim();
+  const angle = document.getElementById('new-short-angle').value;
+  if (!tech) return;
+  data.shorts.push({ id: data.nextId++, tech, angle, status: 'idea', script: '', views: '', retention: '', posted: '' });
+  document.getElementById('new-short-tech').value = '';
+  saveAndSync(); renderShorts();
+}
+
+function cycleShortStatus(id) {
+  const s = data.shorts.find(x => x.id === id);
+  if (!s) return;
+  s.status = { idea:'film', film:'edit', edit:'posted', posted:'idea' }[s.status];
+  if (s.status === 'posted' && !s.posted) s.posted = today();
+  saveAndSync(); renderShorts();
+}
+
+function updateShortField(id, field, val) {
+  const s = data.shorts.find(x => x.id === id);
+  if (!s) return;
+  s[field] = val;
+  saveAndSync();
+}
+
+function deleteShort(id) { data.shorts = data.shorts.filter(s => s.id !== id); saveAndSync(); renderShorts(); }
+
+function renderAll() { updateStats(); renderTasks(); renderSchedule(); renderIdeas(); renderShorts(); renderDashboard(); }
 
 function addTask() {
   const title = document.getElementById('new-task-title').value.trim();
@@ -1818,7 +1936,7 @@ function addIdea() {
 function deleteIdea(id) { data.ideas = data.ideas.filter(i=>i.id!==id); saveAndSync(); renderIdeas(); updateStats(); }
 
 function switchTab(name) {
-  const names = ['dashboard','tasks','schedule','ideas','ai','settings'];
+  const names = ['dashboard','tasks','schedule','ideas','shorts','ai','settings'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
