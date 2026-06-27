@@ -423,6 +423,22 @@ body{
 .header{ padding:1.1rem 1.6rem; }
 .tabs{ padding:0.7rem 1.6rem; }
 .content{ padding:1.4rem 1.6rem; }
+
+/* ===== 背景（視認性優先：山は固定で薄く、アプリ面はすりガラスで重ねる）===== */
+body{
+  background:
+    linear-gradient(rgba(10,12,32,.60), rgba(10,12,32,.82)),
+    url("bg.png") center top / cover fixed,
+    var(--bg3);
+}
+.app{
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+}
+@media (prefers-color-scheme: dark){
+  .app{ background: rgba(20,18,40,0.82); }
+}
 </style>
 </head>
 <body>
