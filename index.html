@@ -843,6 +843,7 @@ let gcalTokenClient = null;
 let gcalReconcileTimer = null;
 let gcalRefreshTimer = null;
 let gcalPullTimer = null;
+let gcalHint = localStorage.getItem('gcal_hint') || '';   // 使用アカウントのメール（選択画面スキップ用）
 const GCAL_TZ = 'Asia/Tokyo';
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 let taskView = 'list';
@@ -975,7 +976,7 @@ function gcalScheduleRefresh(expiresInSec) {
   clearTimeout(gcalRefreshTimer);
   const ms = Math.max(60, (expiresInSec || 3600) - 120) * 1000;
   gcalRefreshTimer = setTimeout(() => {
-    if (gcalTokenClient) { try { gcalTokenClient.requestAccessToken({ prompt: '' }); } catch(e) {} }
+    if (gcalTokenClient) { try { gcalTokenClient.requestAccessToken({ prompt: '', hint: gcalHint || undefined }); } catch(e) {} }
   }, ms);
 }
 
@@ -1018,7 +1019,15 @@ function gcalAutoConnect(retries) {
     return;
   }
   if (!gcalTokenClient) gcalInitClient();
-  if (gcalTokenClient) { gcalSetStatus('自動接続中...', ''); try { gcalTokenClient.requestAccessToken({ prompt: '' }); } catch(e) {} }
+  if (gcalTokenClient) { gcalSetStatus('自動接続中...', ''); try { gcalTokenClient.requestAccessToken({ prompt: '', hint: gcalHint || undefined }); } catch(e) {} }
+}
+
+// 接続中アカウントのメールを取得して保存（次回からアカウント選択をスキップ）
+async function gcalCaptureHint() {
+  try {
+    const c = await gcalApi('GET', '/calendars/primary');
+    if (c && c.id && c.id.indexOf('@') > -1) { gcalHint = c.id; localStorage.setItem('gcal_hint', gcalHint); }
+  } catch(e) {}
 }
 
 function gcalConnect() {
@@ -1031,7 +1040,7 @@ function gcalConnect() {
   if (!gcalClientId) { alert('OAuthクライアントIDを入力してください'); return; }
   if (!gcalTokenClient && !gcalInitClient()) { alert('Google認証ライブラリの読み込み待ちです。数秒後に再度お試しください。'); return; }
   gcalSetStatus('認証中...', '');
-  gcalTokenClient.requestAccessToken({ prompt: gcalToken ? '' : 'consent' });
+  gcalTokenClient.requestAccessToken({ prompt: gcalToken ? '' : 'consent', hint: gcalHint || undefined });
 }
 
 function gcalDisconnect() {
@@ -1225,6 +1234,7 @@ async function gcalPull() {
 async function gcalAfterConnect() {
   const inp = document.getElementById('gcal-client-id');
   if (inp) inp.value = '（接続済み）';
+  await gcalCaptureHint(); // アカウントのメールを保存（次回の選択画面スキップ）
   await gcalPull();        // まずGoogle側の変更を取り込み
   await gcalReconcile();   // 次にSS側を反映
 }
