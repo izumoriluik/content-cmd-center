@@ -439,6 +439,24 @@ body{
 @media (prefers-color-scheme: dark){
   .app{ background: rgba(20,18,40,0.82); }
 }
+
+/* ===== 入力の色＆追加バーのバランス調整 ===== */
+:root{ color-scheme: light; }
+@media (prefers-color-scheme: dark){ :root{ color-scheme: dark; } }
+/* 時刻・日付入力をテーマに統一（時刻欄が白い問題を解消）*/
+input[type=time], input[type=date]{
+  background: var(--bg); color: var(--text);
+  border: 0.5px solid var(--border2); border-radius: var(--radius);
+  padding: 7px 10px; font-size: 13px;
+}
+/* 追加バー：高さ・配置を揃えてバランスよく */
+.controls{ align-items: center; gap: 8px 10px; }
+.controls > input, .controls > select, .controls > button{ height: 38px; }
+.controls input[type=text]{ flex: 1 1 200px; min-width: 180px; }
+.controls input[type=date]{ flex: 0 0 150px; width: 150px; }
+.controls input[type=time]{ flex: 0 0 116px; width: 116px; }
+.controls select{ flex: 0 0 auto; }
+.controls .btn-primary{ flex: 0 0 auto; padding-inline: 18px; }
 </style>
 </head>
 <body>
