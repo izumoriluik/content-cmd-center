@@ -1,0 +1,13 @@
+[
+  {"title":"配信（RTA/ゲーム）","date":"2026-06-29","tag":"stream","urgency":"mid","startTime":"21:00","endTime":"23:59","recur":"biweekly"},
+  {"title":"動画編集","date":"2026-06-30","tag":"edit","urgency":"low","recur":"biweekly"},
+  {"title":"配信（個人ゲーム）","date":"2026-07-01","tag":"stream","urgency":"mid","startTime":"21:00","endTime":"23:59","recur":"biweekly"},
+  {"title":"ガバナイ ゲームデー","date":"2026-07-02","tag":"stream","urgency":"mid","startTime":"21:00","endTime":"23:59","recur":"biweekly"},
+  {"title":"動画編集","date":"2026-07-03","tag":"edit","urgency":"low","recur":"biweekly"},
+  {"title":"雑談配信","date":"2026-07-04","tag":"stream","urgency":"mid","startTime":"21:00","endTime":"23:59","recur":"biweekly"},
+  {"title":"ガバナイ ラジオ","date":"2026-07-05","tag":"stream","urgency":"mid","startTime":"21:00","endTime":"23:59","recur":"biweekly"},
+  {"title":"動画編集","date":"2026-07-06","tag":"edit","urgency":"low","recur":"biweekly"},
+  {"title":"雑談配信","date":"2026-07-07","tag":"stream","urgency":"mid","startTime":"21:00","endTime":"23:59","recur":"biweekly"},
+  {"title":"動画編集","date":"2026-07-08","tag":"edit","urgency":"low","recur":"biweekly"},
+  {"title":"配信（RTA/ゲーム）","date":"2026-07-09","tag":"stream","urgency":"mid","startTime":"21:00","endTime":"23:59","recur":"biweekly"}
+]

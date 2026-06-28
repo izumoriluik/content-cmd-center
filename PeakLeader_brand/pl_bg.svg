@@ -1,0 +1,31 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07070f"/>
+      <stop offset="0.55" stop-color="#11132e"/>
+      <stop offset="1" stop-color="#1c1942"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.2" r="0.6">
+      <stop offset="0" stop-color="#34d0ff" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#34d0ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="neon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5cffd6"/>
+      <stop offset="0.5" stop-color="#34d0ff"/>
+      <stop offset="1" stop-color="#6a7bff"/>
+    </linearGradient>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <circle cx="800" cy="160" r="540" fill="url(#halo)"/>
+  <!-- 遠景の峰 -->
+  <path d="M0 690 L300 520 L560 660 L860 480 L1140 660 L1420 520 L1600 650 L1600 900 L0 900 Z" fill="#1c2350" opacity="0.6"/>
+  <!-- 主峰のネオン縁取り -->
+  <path d="M0 900 L540 440 L820 720 L1080 540 L1600 900 Z" fill="#0c0c1c"/>
+  <path d="M0 900 L540 440 L820 720" fill="none" stroke="url(#neon)" stroke-width="6" filter="url(#blur)" opacity="0.7"/>
+  <path d="M0 900 L540 440 L820 720" fill="none" stroke="url(#neon)" stroke-width="3" opacity="0.95"/>
+  <path d="M820 720 L1080 540 L1600 900" fill="none" stroke="url(#neon)" stroke-width="3" opacity="0.55"/>
+  <!-- 波形（Reader） -->
+  <path d="M0 800 L160 800 L230 740 L300 856 L380 700 L470 824 L560 760 L650 836 L740 752 L830 812 L920 770 L1010 824 L1110 766 L1210 820 L1320 778 L1440 812 L1600 800"
+        fill="none" stroke="#5cffd6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+</svg>
