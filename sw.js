@@ -1,4 +1,4 @@
-const CACHE = 'summitsirdar-v3';
+const CACHE = 'summitsirdar-v4';
 const ASSETS = ['./', './manifest.json', './icon-192.png', './icon-512.png', './bg.png'];
 
 self.addEventListener('install', e => {
