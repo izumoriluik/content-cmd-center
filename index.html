@@ -826,6 +826,11 @@ body{
           <button onclick="exportJSON()"><i class="ti ti-download"></i> JSONエクスポート</button>
           <button onclick="clearAllData()" style="color:var(--red-dark);border-color:var(--red-light);"><i class="ti ti-trash"></i> データ全削除</button>
         </div>
+        <hr class="divider">
+        <div style="font-size:14px;font-weight:500;margin-bottom:0.5rem;">予定の一括取り込み</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;line-height:1.6;">予定の配列（JSON）を貼って取り込み。同じ「タイトル＋日付＋繰り返し」は重複登録しません。</div>
+        <textarea id="import-json" placeholder='[{"title":"配信","date":"2026-07-02","tag":"stream","recur":"biweekly"}]' style="width:100%;min-height:96px;padding:8px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:12px;font-family:monospace;resize:vertical;"></textarea>
+        <div style="margin-top:8px;"><button class="btn-primary" onclick="importSchedulesJSON()"><i class="ti ti-calendar-plus"></i> 取り込み</button></div>
       </div>
     </div>
 
@@ -2549,6 +2554,28 @@ function exportJSON() {
 function clearAllData() {
   if (!confirm('全データを削除しますか？この操作は元に戻せません。')) return;
   data = getDefaultData(); saveAndSync(); renderAll();
+}
+
+function importSchedulesJSON() {
+  const ta = document.getElementById('import-json');
+  let arr;
+  try { arr = JSON.parse(ta.value); } catch(e) { alert('JSONの形式が不正です'); return; }
+  if (!Array.isArray(arr)) { alert('配列（[ ... ]）の形式で貼ってください'); return; }
+  let added = 0;
+  arr.forEach(o => {
+    if (!o || !o.title || !o.date) return;
+    const recur = o.recur || '';
+    if (data.schedules.some(s => s.title === o.title && s.date === o.date && (s.recur || '') === recur)) return;
+    data.schedules.push({
+      id: data.nextId++, title: o.title, date: o.date, endDate: o.endDate || '',
+      tag: o.tag || 'other', startTime: o.startTime || '', endTime: o.endTime || '',
+      urgency: o.urgency || 'mid', sub: o.sub || (recur ? recurLabel(recur) : ''), recur
+    });
+    added++;
+  });
+  saveAndSync(); renderAll();
+  alert(added + '件の予定を取り込みました' + (added < arr.length ? '（重複' + (arr.length - added) + '件はスキップ）' : ''));
+  ta.value = '';
 }
 
 // Init
