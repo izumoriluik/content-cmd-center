@@ -539,6 +539,41 @@ input[type=time], input[type=date]{
 /* モーダル：影と背景ぼかしを強化して浮遊感 */
 .search-modal, .sched-modal, .modal{ box-shadow:0 30px 70px -32px rgba(8,6,32,.7); }
 .search-overlay, .sched-modal-overlay, .modal-overlay{ background:rgba(8,6,24,.46); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+
+/* ===== ミニマル上質レイヤー（静かな高級感：余白を広く・装飾を引き算・金は一点アクセント。色設計/機能は不変）===== */
+:root{ --radius:12px; --radius-lg:16px; }
+body{ letter-spacing:.015em; }
+/* 余白で呼吸を作る */
+.content{ padding:1.7rem 1.85rem; }
+.header{ padding:1.25rem 1.85rem; }
+.tabs{ padding:.85rem 1.85rem; gap:4px; }
+.stats-row{ gap:14px; margin-bottom:1.6rem; }
+.stat-card{ padding:1.1rem 1.25rem; }
+/* タイポは軽く・広く・静かに */
+.app-title{ font-weight:500; letter-spacing:.04em; }
+.app-subtitle{ letter-spacing:.06em; opacity:.85; }
+.stat-label{ letter-spacing:.12em; font-size:10px; opacity:.8; }
+.stat-value{ font-weight:500; font-size:25px; }
+h2, h3, .cal-title{ font-weight:500; letter-spacing:.02em; }
+/* 装飾を引き算：ホバーの跳ねを止め、影は薄く */
+.stat-card:hover, .task-item:hover, .schedule-item:hover, .kanban-card:hover, .idea-card:hover, .cal-event:hover{ transform:none; }
+.stat-card:hover{ box-shadow:0 10px 26px -22px rgba(20,16,60,.4); border-color:var(--border); }
+.cal-event:hover{ box-shadow:inset 2px 0 0 var(--rail,var(--text3)), 0 4px 12px -10px rgba(0,0,0,.45); }
+.cal-event{ box-shadow:inset 2px 0 0 var(--rail,var(--text3)); }
+/* タブ：紫ピルをやめ、極細ゴールド下線に */
+.tab{ background:transparent !important; border-radius:0; }
+.tab:hover:not(.active){ background:transparent !important; color:var(--text2); }
+.tab.active{ background:transparent !important; color:var(--text); font-weight:500; box-shadow:inset 0 -1.5px 0 var(--gold); }
+/* プライマリボタン：グラデを落ち着いた単色＋極細リング */
+.btn-primary{ background:var(--purple-dark); box-shadow:inset 0 0 0 0.5px color-mix(in srgb,#fff 14%,transparent); }
+.btn-primary:hover{ background:var(--purple); }
+/* 統計カードの上辺は金の極細ヘアラインに統一 */
+.stat-card::before{ height:1px; background:var(--gold); opacity:.5; }
+/* 今日のセルは塗りでなく金の細リング＋番号を金に */
+.cal-cell.today{ background:transparent !important; }
+.cal-cell.today .cal-cell-day-num{ background:transparent; color:var(--gold); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 70%,transparent); }
+/* チップの内側リングは弱めて静かに */
+.tag{ box-shadow:none; font-weight:500; }
 </style>
 </head>
 <body>
