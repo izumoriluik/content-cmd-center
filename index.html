@@ -460,6 +460,85 @@ input[type=time], input[type=date]{
 .ctrl-group input[type=date]{ width: 142px; }
 .ctrl-group input[type=time]{ width: 110px; }
 .ctrl-sep{ color: var(--text3); font-size: 12px; }
+
+/* ===== カレンダー磨き（セル余白・イベントピル。機能不変）===== */
+#schedule-calendar .cal-grid{ border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 12px 34px -24px rgba(20,16,60,.55); }
+.cal-cell{ padding:6px 6px 8px; min-height:110px; }
+.cal-cell-day{ padding:2px 0 6px; }
+.cal-cell-day-num{ width:23px; height:23px; font-size:12px; font-family:var(--font-display); font-weight:600; }
+.cal-cell.today{ background:linear-gradient(180deg, color-mix(in srgb, var(--purple) 9%, transparent), transparent 62%); }
+.cal-cell.today:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--purple) 13%, transparent), transparent 62%); }
+.cal-cell-events{ gap:3px; }
+/* イベントピル：左に色レール＋淡いティント＋上品なホバー */
+.cal-event{
+  position:relative; font-size:11px; line-height:1.4;
+  padding:3px 8px 3px 10px; border-radius:7px; font-weight:500;
+  box-shadow: inset 3px 0 0 var(--rail, var(--text3));
+  transition: box-shadow .16s ease, transform .16s ease, filter .16s ease;
+}
+.cal-event:hover{ filter:none; transform:translateY(-1px); box-shadow: inset 3px 0 0 var(--rail, var(--text3)), 0 7px 16px -9px rgba(20,16,60,.6); }
+.cal-event.tag-stream{ --rail:var(--purple-dark); }
+.cal-event.tag-short{ --rail:var(--teal-dark); }
+.cal-event.tag-edit{ --rail:var(--amber-dark); }
+.cal-event.tag-other{ --rail:var(--gray-dark); }
+/* 時刻は数値書体のチップに */
+.cal-event-time{ font-family:var(--font-display); font-weight:600; font-variant-numeric:tabular-nums; font-size:10px; opacity:.82; margin-right:5px; letter-spacing:.01em; }
+.cal-event-recur{ font-size:9px; }
+/* サブ予定のドット表示も余白を少し */
+.cal-event-dot{ padding:2px 2px 2px 1px; gap:6px; }
+.cal-event-dot::before{ width:7px; height:7px; }
+/* 追加（+）は下端に寄せて安定 */
+.cal-cell-add{ margin-top:auto; }
+
+/* ===== UI磨き v2（全体の仕上げ。機能・構造・色設計は不変。既存トークンのみ）===== */
+/* テキスト選択・スクロールバーをブランド寄りに */
+::selection{ background:color-mix(in srgb, var(--purple) 30%, transparent); }
+*{ scrollbar-width:thin; scrollbar-color:var(--border2) transparent; }
+*::-webkit-scrollbar{ width:9px; height:9px; }
+*::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:20px; border:2px solid transparent; background-clip:content-box; }
+*::-webkit-scrollbar-thumb:hover{ background:var(--text3); background-clip:content-box; }
+
+/* タブ切替に軽いフェード＋スライド（描画のみ・挙動不変）*/
+.section.active{ animation:ssSecIn .28s cubic-bezier(.22,.61,.36,1) both; }
+@keyframes ssSecIn{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
+
+/* ヘッダー下にオーロラの細いライン（紫→金）を重ねる */
+.header{ position:relative; }
+.header::after{ content:''; position:absolute; left:0; right:0; bottom:-0.5px; height:1px; pointer-events:none;
+  background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--purple) 50%, transparent) 35%, color-mix(in srgb, var(--gold) 45%, transparent) 70%, transparent); opacity:.5; }
+.app-subtitle{ letter-spacing:.035em; }
+
+/* 検索・同期のミニボタンを丸ピルに */
+.search-trigger, .sync-status{ border-radius:999px; transition:border-color .15s, background .15s, color .15s; }
+.search-trigger:hover, .sync-status:hover{ background:var(--bg3); }
+
+/* チップ類：細い内側リング＋字間で締める（色は据え置き）*/
+.tag, .task-status, .schedule-urgency, .recur-badge, .search-result-type,
+.short-angle, .short-status-pill, .idea-promote, .kanban-col-count{
+  font-weight:600; letter-spacing:.02em;
+  box-shadow:inset 0 0 0 0.5px color-mix(in srgb, currentColor 20%, transparent);
+}
+
+/* 統計カード：ホバーで浮かせ、数値をひとまわり大きく */
+.stat-card{ transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.stat-card:hover{ transform:translateY(-2px); box-shadow:0 16px 32px -22px rgba(20,16,60,.6); border-color:var(--border2); }
+.stat-value{ font-size:26px; }
+
+/* カード／行のホバーを上品に統一 */
+.task-item, .schedule-item, .kanban-card, .idea-card{ transition:border-color .15s, box-shadow .15s, transform .15s, background .15s; }
+.schedule-item:hover, .kanban-card:hover, .idea-card:hover{ box-shadow:0 9px 22px -17px rgba(20,16,60,.5); }
+
+/* スケジュールの日付ボックスをチケット風に */
+.schedule-date-box{ background:linear-gradient(180deg, var(--purple-light), var(--bg2)); box-shadow:inset 0 0 0 0.5px var(--border); }
+.schedule-day{ font-family:var(--font-display); font-weight:600; }
+.schedule-month{ color:var(--purple-dark); font-weight:600; letter-spacing:.06em; }
+
+/* ビュー切替トグルのアクティブを紫ティントに（カレンダー/リスト/表）*/
+.view-toggle-btn.active{ background:var(--purple-light); color:var(--purple-dark); font-weight:600; }
+
+/* モーダル：影と背景ぼかしを強化して浮遊感 */
+.search-modal, .sched-modal, .modal{ box-shadow:0 30px 70px -32px rgba(8,6,32,.7); }
+.search-overlay, .sched-modal-overlay, .modal-overlay{ background:rgba(8,6,24,.46); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
 </style>
 </head>
 <body>
@@ -1764,7 +1843,7 @@ function renderCalendar() {
       if (s.sub && !s.recur) {
         html += `<div class="cal-event-dot tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.sub)}</div>`;
       } else {
-        const timeStr = s.startTime ? `${s.startTime} ` : '';
+        const timeStr = s.startTime ? `<span class="cal-event-time">${s.startTime}</span>` : '';
         const cont = (s._spanLen && s._spanDay > 0) ? '↪ ' : '';
         const spanInfo = s._spanLen ? ` <span style="opacity:.55;font-size:10px;">${s._spanDay + 1}/${s._spanLen}</span>` : '';
         html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s._spanLen?' ('+s._spanLen+'日間)':''}${s.startTime?' '+s.startTime+(s.endTime?'〜'+s.endTime:''):''}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${cont}${timeStr}${esc(s.title)}${spanInfo}${recurIcon}</div>`;
