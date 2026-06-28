@@ -1885,10 +1885,10 @@ function setSchedView(v) {
 function renderCalendar() {
   const container = document.getElementById('schedule-calendar');
   const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  const dowNames = ['日','月','火','水','木','金','土'];
+  const dowNames = ['月','火','水','木','金','土','日'];
 
   const first = new Date(calYear, calMonth, 1);
-  const startDow = first.getDay();
+  const startDow = (first.getDay() + 6) % 7;   // 月曜始まり（月=0 … 日=6）
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const prevDays = new Date(calYear, calMonth, 0).getDate();
   const todayStr = today();
@@ -1906,7 +1906,7 @@ function renderCalendar() {
   </div>`;
   html += '<div class="cal-grid">';
   dowNames.forEach((d, di) => {
-    const dowColor = di === 0 ? 'color:var(--red-dark);' : di === 6 ? 'color:var(--blue-dark);' : '';
+    const dowColor = di === 6 ? 'color:var(--red-dark);' : di === 5 ? 'color:var(--blue-dark);' : '';
     html += `<div class="cal-dow" style="${dowColor}">${d}</div>`;
   });
 
@@ -1931,7 +1931,7 @@ function renderCalendar() {
     }
     const isToday = dateStr === todayStr;
     const dow = i % 7;
-    const dayColor = dow === 0 ? 'color:var(--red-dark);' : dow === 6 ? 'color:var(--blue-dark);' : '';
+    const dayColor = dow === 6 ? 'color:var(--red-dark);' : dow === 5 ? 'color:var(--blue-dark);' : '';
     html += `<div class="cal-cell${other?' other-month':''}${isToday?' today':''}" onclick="calCellClick('${dateStr}',this)">`;
     html += `<div class="cal-cell-day"><span class="cal-cell-day-num" style="${isToday?'':dayColor}">${day}</span></div>`;
     html += `<div class="cal-cell-events">`;
