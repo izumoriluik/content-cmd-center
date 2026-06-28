@@ -319,8 +319,12 @@ button:active { transform: scale(0.98); }
 .short-status-pill:hover { opacity: 0.8; }
 .sst-idea { background: var(--gray-light); color: var(--gray-dark); }
 .sst-film { background: var(--purple-light); color: var(--purple-dark); }
-.sst-edit { background: var(--amber-light); color: var(--amber-dark); }
+.sst-edit { background: var(--teal-light); color: var(--teal-dark); }
 .sst-posted { background: var(--green-light); color: var(--green-dark); }
+.stage-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 1.1rem; padding: 0.7rem 0.9rem; border: 0.5px solid var(--border); border-radius: var(--radius-lg); background: var(--bg2); }
+.stage-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; padding: 5px 11px; border-radius: 999px; }
+.stage-chip .stage-n { font-family: var(--font-display); font-weight: 600; font-size: 14px; }
+.stage-arrow { color: var(--text3); font-size: 12px; }
 .short-cell-input { padding: 5px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit; }
 .short-cell-input:focus { outline: none; border-color: var(--purple); }
 /* Level 1: list */
@@ -2360,7 +2364,7 @@ function renderDashboard() {
 function angleClass(a) { return a==='shock'?'angle-shock':a==='howto'?'angle-howto':'angle-tips'; }
 function angleLabel(a) { return a==='shock'?'衝撃版':a==='howto'?'解説版':'コツ/失敗版'; }
 function shortStatusClass(s) { return s==='posted'?'sst-posted':s==='edit'?'sst-edit':s==='film'?'sst-film':'sst-idea'; }
-function shortStatusLabel(s) { return s==='posted'?'投稿済':s==='edit'?'編集':s==='film'?'撮影':'企画'; }
+function shortStatusLabel(s) { return s==='posted'?'投稿済':s==='edit'?'ストック':s==='film'?'撮影済':'台本'; }
 
 let shortsDetailKey = null;
 let shortsTabId = null;
@@ -2407,7 +2411,18 @@ function renderShortList(el) {
       <i class="ti ti-chevron-right sg-chev"></i>
     </div>`;
   }).join('');
-  el.innerHTML = `<div class="sg-list">${rows}</div>`;
+  const c = { idea: 0, film: 0, edit: 0, posted: 0 };
+  (data.shorts || []).forEach(s => { c[s.status] = (c[s.status] || 0) + 1; });
+  const summary = `<div class="stage-summary">
+    <div class="stage-chip sst-idea"><span class="stage-n">${c.idea}</span> 台本</div>
+    <span class="stage-arrow">→</span>
+    <div class="stage-chip sst-film"><span class="stage-n">${c.film}</span> 撮影済</div>
+    <span class="stage-arrow">→</span>
+    <div class="stage-chip sst-edit"><span class="stage-n">${c.edit}</span> ストック</div>
+    <span class="stage-arrow">→</span>
+    <div class="stage-chip sst-posted"><span class="stage-n">${c.posted}</span> 投稿済</div>
+  </div>`;
+  el.innerHTML = summary + `<div class="sg-list">${rows}</div>`;
 }
 
 function renderShortDetail(el) {
