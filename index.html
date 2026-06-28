@@ -712,7 +712,7 @@ h2, h3, .cal-title{ font-weight:500; letter-spacing:.02em; }
       <input type="text" id="sched-edit-sub" placeholder="補足情報..." />
     </div>
     <div class="sched-modal-actions">
-      <button id="sched-delete-btn" onclick="deleteSchedFromModal()" style="color:var(--red-dark);border-color:var(--red-light);"><i class="ti ti-trash"></i> 削除</button>
+      <span id="sched-delete-area" style="display:inline-flex;gap:6px;flex-wrap:wrap;"></span>
       <div style="display:flex;gap:8px;">
         <button onclick="closeSchedModal()">キャンセル</button>
         <button class="btn-primary" onclick="saveSchedFromModal()"><i class="ti ti-check"></i> 保存</button>
@@ -1118,6 +1118,7 @@ async function loadFromGist() {
       data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; if (s.endDate === undefined) s.endDate = ''; });
       if (!data.shorts) data.shorts = getDefaultData().shorts;
       saveLocal();
+      _undo = []; _redo = []; histBaseline();
       renderAll();
       setSyncStatus('ok', '同期済み');
       return true;
@@ -1135,7 +1136,25 @@ async function manualSync() {
   if (!loaded) await syncToGist();
 }
 
-function saveAndSync() { saveLocal(); if (ghToken) syncToGist(); gcalScheduleReconcile(); }
+// ─── Undo / Redo（操作履歴）───
+let _undo = [], _redo = [], _histCur = null;
+function histBaseline() { _histCur = JSON.stringify(data); }
+function histCapture() {
+  const now = JSON.stringify(data);
+  if (_histCur === null) { _histCur = now; return; }
+  if (now === _histCur) return;
+  _undo.push(_histCur); if (_undo.length > 100) _undo.shift();
+  _redo = [];
+  _histCur = now;
+}
+function histApply(json) {
+  data = JSON.parse(json); _histCur = json;
+  saveLocal(); if (ghToken) syncToGist(); gcalScheduleReconcile(); renderAll();
+}
+function undoAction() { if (!_undo.length) return; _redo.push(_histCur); histApply(_undo.pop()); }
+function redoAction() { if (!_redo.length) return; _undo.push(_histCur); histApply(_redo.pop()); }
+
+function saveAndSync() { saveLocal(); if (ghToken) syncToGist(); gcalScheduleReconcile(); histCapture(); }
 
 function saveToken() {
   const t = document.getElementById('token-input').value.trim();
@@ -1420,6 +1439,24 @@ function gcalScheduleReconcile() {
   gcalReconcileTimer = setTimeout(gcalReconcile, 2500);   // 編集が落ち着いてからまとめ送信
 }
 
+// 繰り返しイベントの「その日1回分」だけGoogleから削除（マスターは残す＝EXDATE化）
+async function gcalDeleteInstance(gcalId, occDateStr) {
+  if (!gcalConnected() || !gcalId) return;
+  gcalSetStatus('この回をGoogleから削除中...', '');
+  try {
+    const cal = encodeURIComponent(gcalCalendarId);
+    const timeMin = new Date(`${occDateStr}T00:00:00+09:00`).toISOString();
+    const timeMax = new Date(`${occDateStr}T23:59:59+09:00`).toISOString();
+    const r = await gcalApi('GET', `/calendars/${cal}/events/${gcalId}/instances`, null, { timeMin, timeMax, maxResults: '10' });
+    const inst = (r.items || []).find(ev => {
+      const sd = (ev.start && ev.start.dateTime) ? ev.start.dateTime.slice(0, 10) : (ev.start && ev.start.date);
+      return sd === occDateStr;
+    });
+    if (inst) await gcalApi('DELETE', `/calendars/${cal}/events/${inst.id}`);
+    gcalSetStatus('接続済み', 'ok');
+  } catch(e) { console.error(e); gcalSetStatus('Google側の削除に失敗（コンソール参照）', 'err'); }
+}
+
 // Google → SS（差分取り込み: syncTokenで変更分のみ）
 async function gcalPull() {
   if (!gcalConnected()) return;
@@ -1461,7 +1498,7 @@ async function gcalPull() {
       if (j.nextSyncToken) localStorage.setItem('gcal_sync_token', j.nextSyncToken);
       break;
     }
-    if (changed) { saveLocal(); if (ghToken) syncToGist(); renderAll(); }
+    if (changed) { saveLocal(); histBaseline(); if (ghToken) syncToGist(); renderAll(); }
     gcalSetStatus('接続済み', 'ok');
   } catch(e) { console.error(e); gcalSetStatus('取り込みエラー（コンソール参照）', 'err'); }
 }
@@ -1497,6 +1534,7 @@ function expandSchedules(startStr, endStr) {
   const byDate = {};
   // 1つの予定（実体 or 繰り返し・複数日）を、表示範囲内の各日に積む
   const addSpan = (s, occDateStr, isVirtual, parentId) => {
+    if (s.skip && s.skip.indexOf(occDateStr) > -1) return;   // この回だけ削除された日は表示しない
     const span = schedSpanDays(s);
     const occ = new Date(occDateStr + 'T00:00:00');
     for (let k = 0; k <= span; k++) {
@@ -1802,7 +1840,14 @@ function goToResult(i) {
 }
 
 document.addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); return; }
+  const mod = e.metaKey || e.ctrlKey;
+  if (!mod) return;
+  const t = e.target, tag = (t.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || t.isContentEditable) return; // 入力中はブラウザ標準のundoに任せる
+  const k = e.key.toLowerCase();
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); undoAction(); }
+  else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redoAction(); }
 });
 
 // ─── View Toggle ───
@@ -1885,12 +1930,12 @@ function renderCalendar() {
     events.forEach(s => {
       const recurIcon = s.recur ? `<span class="cal-event-recur">↻</span>` : '';
       if (s.sub && !s.recur) {
-        html += `<div class="cal-event-dot tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${esc(s.sub)}</div>`;
+        html += `<div class="cal-event-dot tag-${s.tag||'other'}" title="${esc(s.title)}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id}, '${s.date}')">${esc(s.sub)}</div>`;
       } else {
         const timeStr = s.startTime ? `<span class="cal-event-time">${s.startTime}</span>` : '';
         const cont = (s._spanLen && s._spanDay > 0) ? '↪ ' : '';
         const spanInfo = s._spanLen ? ` <span style="opacity:.55;font-size:10px;">${s._spanDay + 1}/${s._spanLen}</span>` : '';
-        html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s._spanLen?' ('+s._spanLen+'日間)':''}${s.startTime?' '+s.startTime+(s.endTime?'〜'+s.endTime:''):''}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id})">${cont}${timeStr}${esc(s.title)}${spanInfo}${recurIcon}</div>`;
+        html += `<div class="cal-event tag-${s.tag||'other'}" title="${esc(s.title)}${s._spanLen?' ('+s._spanLen+'日間)':''}${s.startTime?' '+s.startTime+(s.endTime?'〜'+s.endTime:''):''}${s.sub?' — '+esc(s.sub):''}" onclick="event.stopPropagation();openSchedModal(${s.id}, '${s.date}')">${cont}${timeStr}${esc(s.title)}${spanInfo}${recurIcon}</div>`;
       }
     });
     html += `</div>`;
@@ -2100,7 +2145,7 @@ function upsertSchedule(dateStr, title) {
 function calCellClick(dateStr, cell) {
   if (cell.querySelector('.cal-inline-input')) return;
   const existing = data.schedules.find(s => s.date === dateStr);
-  if (existing) { openSchedModal(existing.id); return; }
+  if (existing) { openSchedModal(existing.id, dateStr); return; }
   const hint = cell.querySelector('.cal-cell-add-hint');
   if (hint) hint.style.display = 'none';
   const input = document.createElement('input');
@@ -2125,16 +2170,19 @@ function calCellClick(dateStr, cell) {
 }
 
 let editingSchedId = null;
+let editingSchedOccDate = null;
 
 function openSchedModal(id, dateStr) {
   editingSchedId = id;
   const modal = document.getElementById('sched-edit-modal');
   const titleEl = document.getElementById('sched-modal-title');
-  const delBtn = document.getElementById('sched-delete-btn');
+  const delArea = document.getElementById('sched-delete-area');
+  const delStyle = 'color:var(--red-dark);border-color:var(--red-light);font-size:12px;';
 
   if (id !== null) {
     const s = data.schedules.find(x => x.id === id);
     if (!s) return;
+    editingSchedOccDate = dateStr || s.date;
     titleEl.innerHTML = '<i class="ti ti-calendar-event" style="font-size:16px;"></i> 予定を編集';
     document.getElementById('sched-edit-title').value = s.title;
     document.getElementById('sched-edit-date').value = s.date;
@@ -2145,7 +2193,9 @@ function openSchedModal(id, dateStr) {
     document.getElementById('sched-edit-urgency').value = s.urgency;
     document.getElementById('sched-edit-recur').value = s.recur || '';
     document.getElementById('sched-edit-sub').value = s.sub || '';
-    delBtn.style.display = '';
+    delArea.innerHTML = s.recur
+      ? `<button onclick="deleteSchedOccurrence()" style="${delStyle}"><i class="ti ti-trash"></i> この回だけ</button><button onclick="deleteSchedSeries()" style="${delStyle}">繰り返し全部</button>`
+      : `<button onclick="deleteSchedSeries()" style="${delStyle}"><i class="ti ti-trash"></i> 削除</button>`;
   } else {
     titleEl.innerHTML = '<i class="ti ti-calendar-plus" style="font-size:16px;"></i> 予定を追加';
     document.getElementById('sched-edit-title').value = '';
@@ -2157,7 +2207,8 @@ function openSchedModal(id, dateStr) {
     document.getElementById('sched-edit-urgency').value = 'mid';
     document.getElementById('sched-edit-recur').value = '';
     document.getElementById('sched-edit-sub').value = '';
-    delBtn.style.display = 'none';
+    editingSchedOccDate = dateStr || today();
+    delArea.innerHTML = '';
   }
   modal.style.display = 'flex';
   setTimeout(() => document.getElementById('sched-edit-title').focus(), 50);
@@ -2213,10 +2264,25 @@ function saveSchedFromModal() {
   saveAndSync(); renderAll(); closeSchedModal();
 }
 
-function deleteSchedFromModal() {
+// 繰り返し全部を削除
+function deleteSchedSeries() {
   if (editingSchedId === null) return;
   data.schedules = data.schedules.filter(s => s.id !== editingSchedId);
   saveAndSync(); renderAll(); closeSchedModal();
+}
+
+// この回だけ削除（繰り返しは残し、その日付だけ除外）
+function deleteSchedOccurrence() {
+  if (editingSchedId === null) return;
+  const s = data.schedules.find(x => x.id === editingSchedId);
+  if (!s) return;
+  if (!s.recur) { return deleteSchedSeries(); }
+  const occ = editingSchedOccDate || s.date;
+  if (!s.skip) s.skip = [];
+  if (s.skip.indexOf(occ) === -1) s.skip.push(occ);
+  const gid = s.gcalId;
+  saveAndSync(); renderAll(); closeSchedModal();
+  if (gcalConnected() && gid) gcalDeleteInstance(gid, occ);   // Google側のその回も削除
 }
 
 // ─── Kanban ───
@@ -2762,6 +2828,7 @@ if (ghToken && gistId) {
 }
 
 renderAll();
+histBaseline();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
