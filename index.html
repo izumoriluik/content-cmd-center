@@ -583,6 +583,9 @@ h2, h3, .cal-title{ font-weight:500; letter-spacing:.02em; }
 .app{ max-width: 1600px; }
 .cal-grid{ grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cal-event, .cal-event-dot{ max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 土日のセルを薄く色付け（日=赤み／土=青み）。今日のセルは金リング優先のため除外 */
+.cal-cell.cal-sun:not(.today){ background: color-mix(in srgb, var(--red-dark) 11%, var(--bg)); }
+.cal-cell.cal-sat:not(.today){ background: color-mix(in srgb, var(--blue-dark) 10%, var(--bg)); }
 </style>
 </head>
 <body>
@@ -1932,7 +1935,8 @@ function renderCalendar() {
     const isToday = dateStr === todayStr;
     const dow = i % 7;
     const dayColor = dow === 6 ? 'color:var(--red-dark);' : dow === 5 ? 'color:var(--blue-dark);' : '';
-    html += `<div class="cal-cell${other?' other-month':''}${isToday?' today':''}" onclick="calCellClick('${dateStr}',this)">`;
+    const wkend = dow === 6 ? ' cal-sun' : dow === 5 ? ' cal-sat' : '';
+    html += `<div class="cal-cell${other?' other-month':''}${isToday?' today':''}${wkend}" onclick="calCellClick('${dateStr}',this)">`;
     html += `<div class="cal-cell-day"><span class="cal-cell-day-num" style="${isToday?'':dayColor}">${day}</span></div>`;
     html += `<div class="cal-cell-events">`;
     const events = schedByDate[dateStr] || [];
