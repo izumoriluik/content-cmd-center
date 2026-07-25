@@ -318,6 +318,22 @@ button:active { transform: scale(0.98); }
 .angle-tips { background: var(--amber-light); color: var(--amber-dark); }
 .short-status-pill { font-size: 10px; padding: 2px 9px; border-radius: 20px; cursor: pointer; font-weight: 500; white-space: nowrap; }
 .short-status-pill:hover { opacity: 0.8; }
+/* 撮影素材リスト（技グループ単位） */
+.mat-wrap { margin-top: 1.25rem; border-top: 0.5px solid var(--border2); padding-top: 1rem; }
+.mat-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 0.35rem; }
+.mat-title { font-size: 13px; font-weight: 500; }
+.mat-count { font-size: 11px; color: var(--text3); }
+.mat-note { font-size: 11px; color: var(--text3); margin-bottom: 0.6rem; line-height: 1.6; }
+.mat-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; }
+.mat-check { flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; color: transparent; }
+.mat-check.on { background: var(--purple); border-color: var(--purple); color: #fff; }
+.mat-text { flex: 1; font-size: 12.5px; line-height: 1.6; }
+.mat-item.done .mat-text { text-decoration: line-through; color: var(--text3); }
+.mat-del { flex-shrink: 0; opacity: 0; border: 0; background: none; color: var(--text3); cursor: pointer; font-size: 12px; }
+.mat-item:hover .mat-del { opacity: 1; }
+.mat-add { display: flex; gap: 8px; margin-top: 0.6rem; }
+.mat-add input { flex: 1; padding: 6px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 12px; }
+.mat-empty { font-size: 12px; color: var(--text3); line-height: 1.7; }
 .sst-idea { background: var(--gray-light); color: var(--gray-dark); }
 .sst-film { background: var(--purple-light); color: var(--purple-dark); }
 .sst-edit { background: var(--teal-light); color: var(--teal-dark); }
@@ -1038,9 +1054,22 @@ function getDefaultData() {
       { id: 31, tech: 'Monkey Skip（シーソー床）', angle: 'shock', title: '【物理バグ】サルを踏み台に床を傾けて進む', status: 'idea', script: '', views: '', retention: '', posted: '' },
       { id: 32, tech: 'Monkey Skip（シーソー床）', angle: 'tips', title: 'モンキースキップはPCのみ？コンソール不可の理由', status: 'idea', script: '', views: '', retention: '', posted: '' },
     ],
+    // 技ごとの撮影素材リスト（3本で共通。まとめ録り用）: { [技名]: [{id,text,done}] }
+    materials: {},
     nextId: 40
   };
 }
+
+// 台本から書き出す素材の定型。技ごとに追加・削除して使う
+const MATERIAL_TEMPLATE = [
+  '最良の成功（衝撃版アタマ用・最速フレーム）',
+  '普通の成功（解説版の見本用・ボツにしない）',
+  '最良と普通の比較（コツ版用・差がどこで出るか）',
+  '失敗：早すぎ',
+  '失敗：遅すぎ',
+  'セットアップ（足元・立ち位置が分かる寄りの画）',
+  '技を使わない通常突破（短縮秒数の比較用）',
+];
 
 function today() { return new Date().toISOString().slice(0,10); }
 
@@ -1058,6 +1087,7 @@ let data = (() => {
     const parsed = JSON.parse(r);
     parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; if (s.endDate === undefined) s.endDate = ''; });
     if (!parsed.shorts) parsed.shorts = getDefaultData().shorts;
+    if (!parsed.materials) parsed.materials = {};
     return parsed;
   } catch(e) { return getDefaultData(); }
 })();
@@ -1091,7 +1121,16 @@ function setSyncStatus(state, label) {
   lbl.textContent = label;
 }
 
-async function syncToGist() {
+// 参照先のGistが削除されている(404)場合に、探し直してから再試行する。
+// 再帰は1回だけ（allowRediscover=false で打ち止め）。
+async function recoverMissingGist() {
+  gistId = '';
+  localStorage.removeItem('gist_id');
+  updateGistDisplay();
+  await findExistingGist();
+}
+
+async function syncToGist(allowRediscover = true) {
   if (!ghToken) return;
   setSyncStatus('syncing', '同期中...');
   try {
@@ -1107,6 +1146,10 @@ async function syncToGist() {
       body = JSON.stringify({ description: 'SummitSirdar データ', public: false, files: { [GIST_FILE]: { content } } });
     }
     const res = await fetch(url, { method, headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' }, body });
+    if (res.status === 404 && gistId && allowRediscover) {
+      await recoverMissingGist();
+      return await syncToGist(false);
+    }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const j = await res.json();
     if (!gistId) { gistId = j.id; localStorage.setItem('gist_id', gistId); updateGistDisplay(); }
@@ -1117,11 +1160,15 @@ async function syncToGist() {
   }
 }
 
-async function loadFromGist() {
+async function loadFromGist(allowRediscover = true) {
   if (!ghToken || !gistId) return false;
   setSyncStatus('syncing', '読み込み中...');
   try {
     const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: { 'Authorization': `token ${ghToken}` } });
+    if (res.status === 404 && allowRediscover) {
+      await recoverMissingGist();
+      return gistId ? await loadFromGist(false) : false;
+    }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const j = await res.json();
     const content = j.files?.[GIST_FILE]?.content;
@@ -1129,6 +1176,7 @@ async function loadFromGist() {
       data = JSON.parse(content);
       data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; if (s.endDate === undefined) s.endDate = ''; });
       if (!data.shorts) data.shorts = getDefaultData().shorts;
+      if (!data.materials) data.materials = {};
       saveLocal();
       _undo = []; _redo = []; histBaseline();
       renderAll();
@@ -2578,7 +2626,78 @@ function renderShortDetail(el) {
       <input class="short-cell-input" style="flex:1;border-color:var(--border);" value="${esc(cur.retention||'')}" placeholder="維持率メモ" onchange="updateShortField(${cur.id},'retention',this.value)" />
       <button class="sd-edit-btn" onclick="toggleShortEdit()">${shortsEditMode?'<i class="ti ti-eye"></i> 読む':'<i class="ti ti-edit"></i> 編集'}</button>
     </div>
-    ${body}`;
+    ${body}
+    ${renderMaterials(head.tech)}`;
+}
+
+// ─── 撮影素材リスト（技グループ単位・3本共通）───
+// 技名は onclick に埋め込まず、開いているグループから引く（esc()は'を潰さないため）
+function currentTech() {
+  const g = shortGroups().find(x => x.key === shortsDetailKey);
+  return g ? g.items[0].tech : null;
+}
+
+function techMaterials(tech) {
+  if (!data.materials) data.materials = {};
+  if (!tech) return [];
+  if (!data.materials[tech]) data.materials[tech] = [];
+  return data.materials[tech];
+}
+
+function renderMaterials(tech) {
+  const list = techMaterials(tech);
+  const done = list.filter(m => m.done).length;
+  const rows = list.map(m => `
+    <div class="mat-item ${m.done?'done':''}">
+      <div class="mat-check ${m.done?'on':''}" onclick="toggleMaterial(${m.id})"><i class="ti ti-check"></i></div>
+      <div class="mat-text">${esc(m.text)}</div>
+      <button class="mat-del" onclick="deleteMaterial(${m.id})" title="削除"><i class="ti ti-x"></i></button>
+    </div>`).join('');
+  const empty = `<div class="mat-empty">台本から必要な素材を書き出してここに置きます。<br>
+    <a href="#" onclick="seedMaterials();return false;" style="color:var(--purple);">定型7項目を入れる</a> か、下から追加してください。</div>`;
+  return `
+    <div class="mat-wrap">
+      <div class="mat-head">
+        <span class="mat-title"><i class="ti ti-clapperboard"></i> 撮影素材（この技の3本で共通）</span>
+        ${list.length ? `<span class="mat-count">${done} / ${list.length}</span>` : ''}
+      </div>
+      <div class="mat-note">1回のまとめ録りで全部押さえる。入力表示は撮影せず編集で後付け。</div>
+      ${list.length ? rows : empty}
+      <div class="mat-add">
+        <input id="mat-input" placeholder="必要な素材を追加..." onkeydown="if(event.key==='Enter')addMaterial()" />
+        <button onclick="addMaterial()"><i class="ti ti-plus"></i> 追加</button>
+      </div>
+    </div>`;
+}
+
+function seedMaterials() {
+  const tech = currentTech(); if (!tech) return;
+  const list = techMaterials(tech);
+  MATERIAL_TEMPLATE.forEach(t => { if (!list.some(m => m.text === t)) list.push({ id: data.nextId++, text: t, done: false }); });
+  saveAndSync(); renderShorts();
+}
+
+function addMaterial() {
+  const tech = currentTech(); if (!tech) return;
+  const el = document.getElementById('mat-input');
+  const t = (el?.value || '').trim();
+  if (!t) return;
+  techMaterials(tech).push({ id: data.nextId++, text: t, done: false });
+  saveAndSync(); renderShorts();
+}
+
+function toggleMaterial(id) {
+  const tech = currentTech(); if (!tech) return;
+  const m = techMaterials(tech).find(x => x.id === id);
+  if (!m) return;
+  m.done = !m.done;
+  saveAndSync(); renderShorts();
+}
+
+function deleteMaterial(id) {
+  const tech = currentTech(); if (!tech) return;
+  data.materials[tech] = techMaterials(tech).filter(x => x.id !== id);
+  saveAndSync(); renderShorts();
 }
 
 function openShortGroup(i) {
