@@ -2661,7 +2661,7 @@ function renderMaterials(tech) {
         <span class="mat-title"><i class="ti ti-clapperboard"></i> 撮影素材（この技の3本で共通）</span>
         ${list.length ? `<span class="mat-count">${done} / ${list.length}</span>` : ''}
       </div>
-      <div class="mat-note">1回のまとめ録りで全部押さえる。入力表示は撮影せず編集で後付け。</div>
+      <div class="mat-note">1回のまとめ録りで全部押さえる。入力表示は実キャプチャ（キーを絞って大きめに）。</div>
       ${list.length ? rows : empty}
       <div class="mat-add">
         <input id="mat-input" placeholder="必要な素材を追加..." onkeydown="if(event.key==='Enter')addMaterial()" />
