@@ -66,6 +66,8 @@ git add -A && git commit -m "..." && git push
     現在は「既存Gistを探す→読む→無い時だけ作る」順に修正済み(`connectWithToken`/`findExistingGist`)。
     自動探索は**最終更新が最新のもの**を選ぶので、正Gistを移す時は対象Gistに書き込んで `updated_at` を更新すること。
   - 他の7個は参照しない。設定タブの「繋ぎ直す」欄にIDを貼れば手動で切り替えられる。
+  - 削除前に全8個を `~/Documents/SummitSirdar_backup/gist_archive_20260726/` へ退避済み（同梱の `README.md` に
+    各ファイルの素性と統合内容を記載）。**リポジトリは公開なのでバックアップをここに置かないこと。**
 - **トークンはユーザー提供（repo/gistスコープのPAT）。リポジトリやこのファイルに絶対書かない。**
 - AIがデータ（特にショート台本）を直接入れる時は GitHub API で `content-cmd.json` を読み→該当配列のみ差し替え→PATCH。
   - 必ず**他の配列(tasks/schedules/ideas)を保持**。書き込み前にユーザーへ「アプリで一度同期して最新化」を促す（loadが上書きするため）。
