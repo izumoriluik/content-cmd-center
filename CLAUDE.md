@@ -59,7 +59,13 @@ git add -A && git commit -m "..." && git push
 
 ## 5. Gist 同期と直接書き込み
 
-- Gist ID: `e504727eaa8d82dc11f84e2bda847383`（ファイル名 `content-cmd.json`）
+- **Gist ID: `a1e80ea08b0b82251950a016a7583d9f`**（ファイル名 `content-cmd.json`）
+  - ⚠️ 2026-07-26に正Gistを変更。旧記載の `e504727…`(2026-06-28で更新停止)を含む**計8個の重複Gistが存在する**。
+    トークン保存時に `syncToGist()`(アップロード)を直接呼んでおり、`gist_id` が空だと新規Gistを作る実装だったため、
+    オリジン違い(`file://`/`localhost:8731`/`github.io`)・PC違い・「連携を解除」のたびに増殖していた。
+    現在は「既存Gistを探す→読む→無い時だけ作る」順に修正済み(`connectWithToken`/`findExistingGist`)。
+    自動探索は**最終更新が最新のもの**を選ぶので、正Gistを移す時は対象Gistに書き込んで `updated_at` を更新すること。
+  - 他の7個は参照しない。設定タブの「繋ぎ直す」欄にIDを貼れば手動で切り替えられる。
 - **トークンはユーザー提供（repo/gistスコープのPAT）。リポジトリやこのファイルに絶対書かない。**
 - AIがデータ（特にショート台本）を直接入れる時は GitHub API で `content-cmd.json` を読み→該当配列のみ差し替え→PATCH。
   - 必ず**他の配列(tasks/schedules/ideas)を保持**。書き込み前にユーザーへ「アプリで一度同期して最新化」を促す（loadが上書きするため）。

@@ -957,7 +957,14 @@ h2, h3, .cal-title{ font-weight:500; letter-spacing:.02em; }
           <input type="password" id="settings-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;padding:7px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:13px;font-family:monospace;" />
           <button onclick="saveTokenFromSettings()"><i class="ti ti-check"></i> 保存</button>
         </div>
-        <div id="gist-id-display" style="font-size:12px;color:var(--text3);margin-bottom:1rem;"></div>
+        <div id="gist-id-display" style="font-size:12px;color:var(--text3);margin-bottom:0.5rem;"></div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:0.5rem;line-height:1.6;">
+          別のPCと違うGistに繋がってしまった場合は、正しいGist ID（またはURL）を貼って繋ぎ直せます。
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;">
+          <input type="text" id="settings-gist-id" placeholder="Gist ID または URL" style="flex:1;padding:7px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:12px;font-family:monospace;" />
+          <button onclick="saveGistIdFromSettings()"><i class="ti ti-plug"></i> 繋ぎ直す</button>
+        </div>
         <button onclick="disconnectGist()" style="font-size:12px;color:var(--text2);border-color:var(--border);">連携を解除</button>
         <hr class="divider">
         <div style="font-size:14px;font-weight:500;margin-bottom:0.75rem;">Googleカレンダー連携（双方向）</div>
@@ -1161,23 +1168,57 @@ function redoAction() { if (!_redo.length) return; _undo.push(_histCur); histApp
 
 function saveAndSync() { saveLocal(); if (ghToken) syncToGist(); gcalScheduleReconcile(); histCapture(); }
 
-function saveToken() {
-  const t = document.getElementById('token-input').value.trim();
-  if (!t) return;
+const TOKEN_PLACEHOLDER = '（設定済み）';
+
+// このトークンのアカウントから既存のデータGistを探す。
+// 見つけずに新規作成すると、PCごとに別Gistができて同期が分裂する。
+async function findExistingGist() {
+  try {
+    const res = await fetch('https://api.github.com/gists?per_page=100', { headers: { 'Authorization': `token ${ghToken}` } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const list = await res.json();
+    // 過去のバグで同名Gistが複数できている場合があるため、最終更新が新しいものを選ぶ
+    const hits = list.filter(g => g.files && g.files[GIST_FILE])
+                     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    if (hits.length) { gistId = hits[0].id; localStorage.setItem('gist_id', gistId); updateGistDisplay(); return true; }
+  } catch(e) { console.error(e); }
+  return false;
+}
+
+// トークン設定時は「まず既存Gistを探して読み込む」順序を守る。
+// 先にsyncToGist()すると、このPCの古いデータで別PCの更新を上書きしてしまう。
+async function connectWithToken(t) {
   ghToken = t;
   localStorage.setItem('gh_token', t);
-  document.getElementById('setup-modal').style.display = 'none';
   setSyncStatus('syncing', '接続中...');
-  syncToGist();
+  if (!gistId) await findExistingGist();
+  const loaded = await loadFromGist();
+  if (!loaded) await syncToGist();
+  updateGistDisplay();
+}
+
+function saveToken() {
+  const t = document.getElementById('token-input').value.trim();
+  if (!t || t === TOKEN_PLACEHOLDER) return;
+  document.getElementById('setup-modal').style.display = 'none';
+  connectWithToken(t);
 }
 
 function saveTokenFromSettings() {
   const t = document.getElementById('settings-token').value.trim();
-  if (!t) return;
-  ghToken = t;
-  localStorage.setItem('gh_token', t);
-  setSyncStatus('syncing', '接続中...');
-  syncToGist();
+  if (!t || t === TOKEN_PLACEHOLDER) { alert('新しいトークンを入力してください'); return; }
+  connectWithToken(t);
+}
+
+// 別PCで作られたGistへ手動で繋ぎ直す（同期が分裂したときの復旧用）
+function saveGistIdFromSettings() {
+  const v = document.getElementById('settings-gist-id').value.trim();
+  if (!v) return;
+  gistId = v.replace(/\/+$/, '').split('/').pop();  // Gist URLを貼られても拾う
+  localStorage.setItem('gist_id', gistId);
+  updateGistDisplay();
+  setSyncStatus('syncing', '読み込み中...');
+  loadFromGist();
 }
 
 function disconnectGist() {
@@ -1192,6 +1233,8 @@ function skipSetup() { document.getElementById('setup-modal').style.display = 'n
 function updateGistDisplay() {
   const el = document.getElementById('gist-id-display');
   if (el) el.textContent = gistId ? 'Gist ID: ' + gistId : '';
+  const inp = document.getElementById('settings-gist-id');
+  if (inp && gistId) inp.value = gistId;   // 両PCで見比べられるように現在値を表示
 }
 
 function saveClaudeKey() {
