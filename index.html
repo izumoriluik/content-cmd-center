@@ -318,6 +318,26 @@ button:active { transform: scale(0.98); }
 .angle-tips { background: var(--amber-light); color: var(--amber-dark); }
 .short-status-pill { font-size: 10px; padding: 2px 9px; border-radius: 20px; cursor: pointer; font-weight: 500; white-space: nowrap; }
 .short-status-pill:hover { opacity: 0.8; }
+/* 台本ビュー内のセクションタブ（台本 / 素材 / 記録） */
+.sd-sections { display: flex; gap: 4px; margin: 0.9rem 0 0.75rem; border-bottom: 0.5px solid var(--border2); }
+.sd-sec { border: 0; background: none; color: var(--text3); font-size: 12.5px; padding: 6px 12px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.sd-sec:hover { color: var(--text2); }
+.sd-sec.active { color: var(--text); border-bottom-color: var(--purple); font-weight: 500; }
+/* 記録タブ */
+.rec-sum { background: var(--bg2, var(--bg)); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 1rem; }
+.rec-sum-main { font-size: 15px; margin-bottom: 4px; }
+.rec-sum-sub { font-size: 12px; color: var(--text3); line-height: 1.8; }
+.rec-warn { font-size: 11px; color: var(--text3); margin-top: 6px; }
+.rec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.rec-f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text2); }
+.rec-f em { display: block; font-style: normal; font-size: 10.5px; color: var(--text3); }
+.rec-f input { padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 13px; }
+.rec-post { margin-top: 1rem; display: flex; flex-direction: column; gap: 10px; }
+.rec-f-wide { width: 100%; }
+.rec-chk { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; cursor: pointer; }
+.rec-chk input { margin-top: 3px; flex-shrink: 0; }
+.rec-chk em { display: block; font-style: normal; font-size: 10.5px; color: var(--text3); }
+.rec-stamps { margin-top: 1rem; font-size: 11px; color: var(--text3); line-height: 1.7; }
 /* 撮影素材リスト（技グループ単位） */
 .mat-wrap { margin-top: 1.25rem; border-top: 0.5px solid var(--border2); padding-top: 1rem; }
 .mat-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 0.35rem; }
@@ -1056,6 +1076,8 @@ function getDefaultData() {
     ],
     // 技ごとの撮影素材リスト（3本で共通。まとめ録り用）: { [技名]: [{id,text,done}] }
     materials: {},
+    // 技ごとのメタ（撮影はまとめ録りなので技単位）: { [技名]: { filmMin } }
+    techMeta: {},
     nextId: 40
   };
 }
@@ -1088,6 +1110,7 @@ let data = (() => {
     parsed.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; if (s.endDate === undefined) s.endDate = ''; });
     if (!parsed.shorts) parsed.shorts = getDefaultData().shorts;
     if (!parsed.materials) parsed.materials = {};
+    if (!parsed.techMeta) parsed.techMeta = {};
     return parsed;
   } catch(e) { return getDefaultData(); }
 })();
@@ -1105,6 +1128,7 @@ let gcalPullTimer = null;
 let gcalHint = localStorage.getItem('gcal_hint') || '';   // 使用アカウントのメール（選択画面スキップ用）
 const GCAL_TZ = 'Asia/Tokyo';
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+let shortsSection = 'script';   // 台本ビュー内のタブ: script / materials / record
 let taskView = 'list';
 let schedView = 'calendar';
 let calYear, calMonth;
@@ -1177,6 +1201,7 @@ async function loadFromGist(allowRediscover = true) {
       data.schedules.forEach(s => { if (s.recur === undefined) s.recur = ''; if (s.tag === undefined) s.tag = 'other'; if (s.endDate === undefined) s.endDate = ''; });
       if (!data.shorts) data.shorts = getDefaultData().shorts;
       if (!data.materials) data.materials = {};
+      if (!data.techMeta) data.techMeta = {};
       saveLocal();
       _undo = []; _redo = []; histBaseline();
       renderAll();
@@ -2626,9 +2651,16 @@ function renderShortDetail(el) {
       <input class="short-cell-input" style="flex:1;border-color:var(--border);" value="${esc(cur.retention||'')}" placeholder="維持率メモ" onchange="updateShortField(${cur.id},'retention',this.value)" />
       <button class="sd-edit-btn" onclick="toggleShortEdit()">${shortsEditMode?'<i class="ti ti-eye"></i> 読む':'<i class="ti ti-edit"></i> 編集'}</button>
     </div>
-    ${body}
-    ${renderMaterials(head.tech)}`;
+    <div class="sd-sections">
+      ${[['script','台本','ti-file-text'],['materials','素材','ti-clapperboard'],['record','記録','ti-clock']]
+        .map(([k,label,icon]) => `<button class="sd-sec ${shortsSection===k?'active':''}" onclick="selectShortSection('${k}')"><i class="ti ${icon}"></i> ${label}</button>`).join('')}
+    </div>
+    ${shortsSection === 'script' ? body
+      : shortsSection === 'materials' ? renderMaterials(head.tech)
+      : renderRecord(cur, head.tech, items)}`;
 }
+
+function selectShortSection(k) { shortsSection = k; renderShorts(); }
 
 // ─── 撮影素材リスト（技グループ単位・3本共通）───
 // 技名は onclick に埋め込まず、開いているグループから引く（esc()は'を潰さないため）
@@ -2667,6 +2699,100 @@ function renderMaterials(tech) {
         <input id="mat-input" placeholder="必要な素材を追加..." onkeydown="if(event.key==='Enter')addMaterial()" />
         <button onclick="addMaterial()"><i class="ti ti-plus"></i> 追加</button>
       </div>
+    </div>`;
+}
+
+// ─── 記録タブ（時間・実尺・投稿後チェック）───
+function techMeta(tech) {
+  if (!data.techMeta) data.techMeta = {};
+  if (!data.techMeta[tech]) data.techMeta[tech] = { filmMin: '' };
+  return data.techMeta[tech];
+}
+function updateTechMeta(field, val) {
+  const tech = currentTech(); if (!tech) return;
+  techMeta(tech)[field] = val;
+  saveAndSync(); renderShorts();
+}
+function updateShortFlag(id, field, checked) {
+  const s = data.shorts.find(x => x.id === id);
+  if (!s) return;
+  s[field] = checked;
+  saveAndSync(); renderShorts();
+}
+
+const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
+const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+
+// 「1本あたり何分か」を出す。撮影は技単位なのでその技の本数で割って按分する
+function costPerVideo() {
+  const edits = [], checks = [], films = [];
+  data.shorts.forEach(s => {
+    const e = num(s.editMin); if (e) edits.push(e);
+    const c = num(s.checkMin); if (c) checks.push(c);
+  });
+  Object.entries(data.techMeta || {}).forEach(([tech, meta]) => {
+    const f = num(meta.filmMin);
+    const n = data.shorts.filter(s => s.tech === tech).length;
+    if (f && n) films.push(f / n);
+  });
+  const e = avg(edits), c = avg(checks), f = avg(films);
+  return { e, c, f, edits: edits.length, checks: checks.length, films: films.length,
+           total: (e || 0) + (c || 0) + (f || 0), ready: edits.length > 0 };
+}
+
+function leadTimeDays(s) {
+  if (!s.stamps) return null;
+  const ds = Object.values(s.stamps).filter(Boolean).sort();
+  if (ds.length < 2 || !s.stamps.posted) return null;
+  const a = new Date(ds[0] + 'T00:00:00'), b = new Date(s.stamps.posted + 'T00:00:00');
+  return Math.round((b - a) / 86400000);
+}
+
+function renderRecord(cur, tech, items) {
+  const meta = techMeta(tech);
+  const c = costPerVideo();
+  const lt = leadTimeDays(cur);
+  const stamps = cur.stamps || {};
+  const stampRow = ['idea','film','edit','posted']
+    .filter(k => stamps[k])
+    .map(k => `${shortStatusLabel(k)} ${stamps[k]}`).join('　→　');
+
+  const summary = c.ready
+    ? `<div class="rec-sum">
+         <div class="rec-sum-main">1本あたり <b>約${Math.round(c.total)}分</b></div>
+         <div class="rec-sum-sub">
+           編集 ${c.e ? Math.round(c.e) + '分' : '—'}（${c.edits}本）
+           ／ 台本確認 ${c.c ? Math.round(c.c) + '分' : '—'}（${c.checks}本）
+           ／ 撮影の按分 ${c.f ? Math.round(c.f) + '分' : '—'}（${c.films}技）
+         </div>
+         <div class="rec-sum-sub">週2本なら <b>${Math.round(c.total * 2)}分/週</b>　週3本なら <b>${Math.round(c.total * 3)}分/週</b></div>
+         ${c.edits < 3 ? '<div class="rec-warn">※ 編集時間が3本分たまると精度が上がります（今 ' + c.edits + '本）</div>' : ''}
+       </div>`
+    : `<div class="rec-sum"><div class="rec-sum-sub">編集時間をどれか1本入れると、1本あたりの所要時間と週あたりの必要時間が出ます。<br>
+        毎回でなくて構いません。3〜5本ぶん取れれば十分です。</div></div>`;
+
+  return `
+    <div class="rec-wrap">
+      ${summary}
+      <div class="rec-grid">
+        <label class="rec-f"><span>編集（分）</span>
+          <input type="number" min="0" value="${esc(cur.editMin||'')}" onchange="updateShortField(${cur.id},'editMin',this.value)" /></label>
+        <label class="rec-f"><span>台本確認（分）</span>
+          <input type="number" min="0" value="${esc(cur.checkMin||'')}" onchange="updateShortField(${cur.id},'checkMin',this.value)" /></label>
+        <label class="rec-f"><span>実尺（秒）</span>
+          <input type="number" min="0" value="${esc(cur.lengthSec||'')}" onchange="updateShortField(${cur.id},'lengthSec',this.value)" /></label>
+        <label class="rec-f"><span>撮影（分）<em>技で共通・この技の${data.shorts.filter(s => s.tech === tech).length}本で按分</em></span>
+          <input type="number" min="0" value="${esc(meta.filmMin||'')}" onchange="updateTechMeta('filmMin',this.value)" /></label>
+      </div>
+      <div class="rec-post">
+        <label class="rec-f rec-f-wide"><span>公開URL</span>
+          <input type="url" placeholder="https://youtube.com/shorts/..." value="${esc(cur.url||'')}" onchange="updateShortField(${cur.id},'url',this.value)" /></label>
+        <label class="rec-chk">
+          <input type="checkbox" ${cur.pinned?'checked':''} onchange="updateShortFlag(${cur.id},'pinned',this.checked)" />
+          <span>固定コメント追加済み<em>解説版を出したら衝撃版にも戻って足す</em></span>
+        </label>
+      </div>
+      ${stampRow ? `<div class="rec-stamps">${esc(stampRow)}${lt !== null ? `　（着手から投稿まで ${lt}日）` : ''}</div>` : ''}
     </div>`;
 }
 
@@ -2725,6 +2851,8 @@ function cycleShortStatus(id) {
   const s = data.shorts.find(x => x.id === id);
   if (!s) return;
   s.status = { idea:'film', film:'edit', edit:'posted', posted:'idea' }[s.status];
+  if (!s.stamps) s.stamps = {};
+  s.stamps[s.status] = today();   // 入力ゼロでリードタイムが出るよう自動記録
   if (s.status === 'posted' && !s.posted) s.posted = today();
   saveAndSync(); renderShorts();
 }
